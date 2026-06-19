@@ -378,7 +378,7 @@
                         input.click();
                     });
 
-                    this.importButton = createProButton('tariff-create-pro-nav-btn', 'Создание', 'btn-pro-create', () => this.showImportSidebar());
+                    this.importButton = createProButton('tariff-create-pro-nav-btn', 'Массовое Доставка', 'btn-pro-create', () => this.showImportSidebar());
                     this.renameButton = createProButton('tariff-rename-pro-nav-btn', 'Переименование', 'btn-pro-rename', () => this.showRenameSidebar());
                     this.updateButton = createProButton('tariff-import-pro-nav-btn', 'Импорт', 'btn-pro-import', () => this.showUpdateSidebar());
                     this.navButton = createProButton('tariff-export-pro-nav-btn', this.isExporting ? 'Экспорт (активен)' : 'Экспорт', this.isExporting ? 'btn-pro-export-active' : 'btn-pro-export', () => this.showSidebar());
