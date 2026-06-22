@@ -1,5 +1,5 @@
 // pvz-tariff-creator.js
-console.log('[pvz-tariff-creator] Загружен с умным наблюдателем и финальным редиректом');
+console.log('[pvz-tariff-creator] Загружен с интерфейсом предзагрузки, умным наблюдателем и ценой возврата');
 
 class PVZTariffCreator {
     constructor() {
@@ -10,20 +10,18 @@ class PVZTariffCreator {
         this.sidebar = null;
         this.logEntries = [];
         this.baseTariffsUrl = ''; 
-        this.isProcessingStep = false; // Блокировщик двойного срабатывания таймера
+        this.isProcessingStep = false; 
 
-        // 1. Восстанавливаем состояние из памяти браузера (если была перезагрузка)
         this.loadStateFromStorage();
 
-        // 2. Если мы были в процессе создания, возобновляем интерфейс
+        // Если страница перезагрузилась в процессе создания, сразу показываем окно прогресса
         if (this.isCreating) {
-            this.createSidebar();
+            this.createProgressSidebar();
             this.renderLog();
             this.updateSidebarDisplay();
             this.addLog('🔄 Возобновление автоматического создания тарифов...', 'info');
         }
 
-        // 3. Запускаем постоянный наблюдатель за страницей
         this.startPageWatcher();
     }
 
@@ -58,26 +56,88 @@ class PVZTariffCreator {
         localStorage.removeItem('pvz_automation_state');
     }
 
+    // === Открытие начального меню ===
+    openMenu() {
+        if (this.isCreating) {
+            this.createProgressSidebar();
+            this.updateSidebarDisplay();
+            return;
+        }
+        this.createConfigSidebar();
+    }
+
+    // === Обработка загрузки файла из UI ===
+    async handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        this.tariffsToCreate = [];
+        this.currentIndex = 0;
+        this.logEntries = [];
+        this.renderLog();
+        
+        this.addLog(`📁 Чтение файла: ${file.name}`, 'info');
+        const statusEl = document.getElementById('pvz-status');
+        if (statusEl) statusEl.textContent = 'Обработка файла...';
+
+        try {
+            const rows = await this.readExcelFile(file);
+            this.parseTariffs(rows);
+            this.addLog(`📊 Успешно распарсено: ${this.tariffsToCreate.length} тарифов`, 'success');
+            
+            if (statusEl) {
+                statusEl.textContent = `Готово к загрузке: ${this.tariffsToCreate.length} шт.`;
+                statusEl.style.color = '#4ade80';
+            }
+
+            // Активируем кнопку старта
+            const startBtn = document.getElementById('pvz-start');
+            if (startBtn && this.tariffsToCreate.length > 0) {
+                startBtn.disabled = false;
+                startBtn.style.background = '#3b82f6';
+                startBtn.style.color = '#ffffff';
+                startBtn.style.cursor = 'pointer';
+            }
+        } catch (e) {
+            this.addLog(`❌ Ошибка: ${e.message}`, 'error');
+            if (statusEl) {
+                statusEl.textContent = 'Ошибка чтения файла';
+                statusEl.style.color = '#f87171';
+            }
+        }
+    }
+
+    // === Запуск процесса после нажатия кнопки "Начать создание" ===
+    startProcess() {
+        if (!this.tariffsToCreate || this.tariffsToCreate.length === 0) return;
+
+        this.isCreating = true;
+        this.shouldStop = false;
+        this.baseTariffsUrl = window.location.href; // Запоминаем URL старта
+
+        this.saveStateToStorage();
+        this.createProgressSidebar(); // Переключаем интерфейс на прогресс-бар
+        
+        this.addLog('🚀 Запуск массового создания ПВЗ-тарифов', 'info');
+        this.updateSidebarDisplay();
+        // Наблюдатель startPageWatcher() подхватит работу на следующем тике
+    }
+
     // === Наблюдатель за страницей (Движок стейт-машины) ===
     startPageWatcher() {
         setInterval(async () => {
             if (!this.isCreating || this.shouldStop || this.isProcessingStep) return;
 
-            this.isProcessingStep = true; // Блокируем новые вызовы, пока обрабатываем текущий
+            this.isProcessingStep = true; 
 
-            // 1. Ищем поле ввода (индикатор того, что открыта сама форма)
             const nameInput = document.querySelector('input[placeholder*="Введите название тарифа"]');
-            
-            // 2. Ищем модальное окно выбора типа тарифа
             const dialog = document.querySelector('dialog[open]');
             const isTypeDialog = dialog && dialog.textContent.includes('Выберите тип тарифа');
 
             if (nameInput) {
-                // СОСТОЯНИЕ 3: ФОРМА ОТКРЫТА -> ЗАПОЛНЯЕМ И СОХРАНЯЕМ
                 await this.processCreatePage();
             } 
             else if (isTypeDialog) {
-                // СОСТОЯНИЕ 2: ОТКРЫТО ОКНО ВЫБОРА -> ЖМЕМ "ДОСТАВКА В ПВЗ"
                 this.addLog('💬 Выбираем тип тарифа...', 'info');
                 const pvzButton = Array.from(dialog.querySelectorAll('button')).find(btn => {
                     const text = (btn.textContent || '').trim().toUpperCase();
@@ -87,25 +147,22 @@ class PVZTariffCreator {
                 if (pvzButton) {
                     pvzButton.click();
                     this.addLog('✅ Нажата кнопка "Доставка в ПВЗ"', 'success');
-                    await this.delay(1500); // Ждем пока загрузится сама форма
+                    await this.delay(1500); 
                 } else {
                     this.addLog('⚠️ Кнопка "Доставка в ПВЗ" не найдена', 'warning');
                 }
             } 
             else {
-                // СОСТОЯНИЕ 1: СПИСОК ТАРИФОВ -> ИЩЕМ И ЖМЕМ КНОПКУ "СОЗДАТЬ"
                 const createBtn = Array.from(document.querySelectorAll('button')).find(b => {
                     const text = (b.textContent || '').trim().toLowerCase();
-                    // Ищем именно кнопку создания, игнорируя кнопки нашего сайдбара
                     return text.includes('создать') && text.length < 30 && !b.closest('#pvz-creator-sidebar');
                 });
 
                 if (createBtn) {
                     this.addLog('🖱️ Находимся в списке. Нажимаем кнопку "Создать"...', 'info');
                     createBtn.click();
-                    await this.delay(1000); // Ждем пока появится модальное окно
+                    await this.delay(1000); 
                 } else {
-                    // Если потерялись (нас занесло на левую страницу) — возвращаемся на старт
                     if (this.baseTariffsUrl && window.location.href !== this.baseTariffsUrl) {
                         this.addLog('↩️ Неверный URL. Направляем на точную страницу старта...', 'warning');
                         window.location.href = this.baseTariffsUrl;
@@ -113,41 +170,8 @@ class PVZTariffCreator {
                 }
             }
 
-            this.isProcessingStep = false; // Снимаем блокировку
+            this.isProcessingStep = false; 
         }, 1500);
-    }
-
-    // Точка входа при загрузке Excel
-    async startFromExcel(file) {
-        if (this.isCreating) return;
-        
-        this.isCreating = true;
-        this.shouldStop = false;
-        this.tariffsToCreate = [];
-        this.currentIndex = 0;
-        this.logEntries = [];
-        
-        // КРИТИЧЕСКИЙ МОМЕНТ: Запоминаем ТОЧНЫЙ URL старта (с дивизионом, вкладками и т.д.)
-        this.baseTariffsUrl = window.location.href; 
-
-        this.createSidebar();
-        this.addLog('🚀 Запуск массового создания ПВЗ-тарифов', 'info');
-
-        try {
-            const rows = await this.readExcelFile(file);
-            this.parseTariffs(rows);
-            this.addLog(`📊 Загружено ${this.tariffsToCreate.length} тарифов`, 'success');
-            
-            // Сохраняем начальное состояние
-            this.saveStateToStorage();
-            this.updateSidebarDisplay();
-            
-            // Дальше всё сделает startPageWatcher()
-        } catch (e) {
-            this.addLog(`❌ Ошибка: ${e.message}`, 'error');
-            this.isCreating = false;
-            this.clearStorage();
-        }
     }
 
     // Логика обработки страницы создания тарифа
@@ -162,26 +186,21 @@ class PVZTariffCreator {
         this.updateSidebarDisplay();
 
         try {
-            // Заполнение полей формы
             await this.fillFormFields(tariff);
-            
-            // Нажатие главной кнопки "Сохранить"
             const isSaved = await this.clickMainSaveButton(); 
 
             if (isSaved) {
                 this.currentIndex++;
                 
-                // Проверяем, был ли это последний тариф
                 if (this.currentIndex >= this.tariffsToCreate.length) {
                     this.finishImport();
                     this.addLog('↩️ Завершено! Возвращаемся к списку тарифов...', 'info');
-                    await this.delay(2000); // Даем 2 секунды прочитать лог
-                    window.location.href = this.baseTariffsUrl; // Финальный редирект на старт
+                    await this.delay(2000); 
+                    window.location.href = this.baseTariffsUrl; 
                 } else {
-                    this.saveStateToStorage(); // Запоминаем новый индекс перед редиректом
+                    this.saveStateToStorage(); 
                     this.addLog('↩️ Тариф сохранен! Перенаправляем на ТОЧНУЮ страницу старта...', 'success');
                     await this.delay(1000);
-                    // ХАРД-РЕДИРЕКТ НА СТРАНИЦУ СТАРТА (Перезагрузит страницу и сохранит дивизион)
                     window.location.href = this.baseTariffsUrl; 
                 }
             } else {
@@ -241,7 +260,7 @@ class PVZTariffCreator {
                 saveBtn.click();
 
                 this.addLog('💾 ✅ Нажата ГЛАВНАЯ кнопка "Сохранить"', 'success');
-                await this.delay(2500); // Даем время серверу принять запрос
+                await this.delay(2500); 
                 return true;
             }
 
@@ -309,11 +328,19 @@ class PVZTariffCreator {
 
         const bulkInternal = dialog.querySelector('#af-bulk0');
         const bulkCustomer = dialog.querySelector('#af-bulk1');
+        const bulkReturn = dialog.querySelector('#af-bulk2'); 
+
         if (bulkInternal && bulkCustomer) {
             bulkInternal.value = mgxRows.map(r => r.internal).join('\n');
             bulkCustomer.value = mgxRows.map(r => r.customer).join('\n');
             bulkInternal.dispatchEvent(new Event('input', {bubbles: true}));
             bulkCustomer.dispatchEvent(new Event('input', {bubbles: true}));
+
+            if (bulkReturn) {
+                bulkReturn.value = mgxRows.map(r => r.returnPrice).join('\n');
+                bulkReturn.dispatchEvent(new Event('input', {bubbles: true}));
+            }
+
             const transferBtn = dialog.querySelector('#af-transfer-all');
             if (transferBtn) transferBtn.click();
         }
@@ -366,6 +393,12 @@ class PVZTariffCreator {
         const headerMap = new Map(header.map((h, i) => [h, i]));
         const get = (row, key, fb = -1) => row[headerMap.has(key) ? headerMap.get(key) : fb] || '';
 
+        const truncatePrice = (val) => {
+            const strVal = String(val || '').trim();
+            if (!strVal) return '';
+            return strVal.replace(/\s+/g, '').split(/[,.]/)[0];
+        };
+
         for (let i = 1; i < rows.length; i++) {
             const row = rows[i];
             const name = String(get(row, 'Название тарифа', 0)).trim();
@@ -385,14 +418,16 @@ class PVZTariffCreator {
             }
 
             t.mgxRows.push({
-                weight: get(row, 'Макс. вес (МГХ), кг', 3),
-                internal: get(row, 'Цена внутренняя, руб', 4),
-                customer: get(row, 'Цена покупателя, руб', 5)
+                weight: get(row, 'Макс. вес (МГХ), кг', 3), 
+                internal: truncatePrice(get(row, 'Цена внутренняя, руб', 4)),
+                customer: truncatePrice(get(row, 'Цена покупателя, руб', 5)),
+                returnPrice: truncatePrice(get(row, 'Цена возврата, руб', 6))
             });
         }
     }
 
-    createSidebar() {
+    // === ИНТЕРФЕЙС: Стартовое окно (Конфигуратор) ===
+    createConfigSidebar() {
         if (this.sidebar) this.sidebar.remove();
         this.sidebar = document.createElement('div');
         this.sidebar.id = 'pvz-creator-sidebar';
@@ -400,7 +435,45 @@ class PVZTariffCreator {
 
         this.sidebar.innerHTML = `
             <div style="padding:16px 20px;background:#0f172a;border-bottom:1px solid #334155;display:flex;justify-content:space-between;align-items:center;">
-                <div><h3 style="color:#60a5fa;margin:0;font-size:18px;">➕ Создание ПВЗ-тарифов</h3></div>
+                <div>
+                    <h3 style="color:#60a5fa;margin:0;font-size:18px;">📦 ПВЗ-Тарифы</h3>
+                    <div style="color:#94a3b8;font-size:11px;margin-top:4px;">Настройка создания</div>
+                </div>
+                <button id="pvz-close" style="background:none;border:none;color:#94a3b8;font-size:22px;cursor:pointer;">×</button>
+            </div>
+            <div style="padding:16px;flex:1;display:flex;flex-direction:column;min-height:0;">
+                <div style="margin-bottom:16px;background:#0f172a;padding:16px;border-radius:8px;border:1px solid #334155;">
+                    <label style="color:#cbd5e1;font-size:13px;display:block;margin-bottom:8px;">1. Выберите файл Excel</label>
+                    <input type="file" id="pvz-file" accept=".xls,.xlsx" style="width:100%;color:#fff;font-size:13px;background:#1e293b;padding:8px;border-radius:6px;">
+                    <div id="pvz-status" style="margin-top:8px;font-size:12px;color:#94a3b8;">Файл не выбран</div>
+                </div>
+                <div style="color:#94a3b8;font-size:12px;margin-bottom:8px;">Лог подготовки:</div>
+                <div id="pvz-log" style="flex:1;background:#0f172a;border-radius:8px;padding:12px;overflow-y:auto;font-size:12px;font-family:monospace;margin-bottom:16px;border:1px solid #334155;"></div>
+                <button id="pvz-start" disabled style="width:100%;padding:12px;background:#475569;color:#94a3b8;border:none;border-radius:6px;cursor:not-allowed;font-weight:bold;font-size:14px;transition:0.2s;">🚀 2. Начать создание</button>
+            </div>
+        `;
+
+        document.body.appendChild(this.sidebar);
+        
+        document.getElementById('pvz-close').onclick = () => this.hideSidebar();
+        document.getElementById('pvz-file').onchange = (e) => this.handleFileSelect(e);
+        document.getElementById('pvz-start').onclick = () => this.startProcess();
+        
+        this.renderLog();
+    }
+
+    // === ИНТЕРФЕЙС: Окно процесса (Конвейер) ===
+    createProgressSidebar() {
+        if (this.sidebar) this.sidebar.remove();
+        this.sidebar = document.createElement('div');
+        this.sidebar.id = 'pvz-creator-sidebar';
+        this.sidebar.style.cssText = `position:fixed;top:0;right:0;width:420px;height:100vh;background:#1e293b;box-shadow:-2px 0 20px rgba(0,0,0,0.3);z-index:1000002;display:flex;flex-direction:column;font-family:'Segoe UI',Arial,sans-serif;border-left:1px solid #334155;`;
+
+        this.sidebar.innerHTML = `
+            <div style="padding:16px 20px;background:#0f172a;border-bottom:1px solid #334155;display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <h3 style="color:#60a5fa;margin:0;font-size:18px;">⏳ Идёт создание ПВЗ...</h3>
+                </div>
                 <button id="pvz-close" style="background:none;border:none;color:#94a3b8;font-size:22px;cursor:pointer;">×</button>
             </div>
             <div style="padding:16px;flex:1;display:flex;flex-direction:column;min-height:0;">
@@ -416,18 +489,21 @@ class PVZTariffCreator {
                 <div id="pvz-log" style="flex:1;background:#0f172a;border-radius:8px;padding:12px;overflow-y:auto;font-size:12px;font-family:monospace;"></div>
             </div>
             <div style="padding:16px;border-top:1px solid #334155;">
-                <button id="pvz-stop" style="width:100%;padding:10px;background:#dc2626;color:white;border:none;border-radius:6px;cursor:pointer;">⏹️ Остановить</button>
+                <button id="pvz-stop" style="width:100%;padding:10px;background:#dc2626;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:bold;">⏹️ Остановить</button>
             </div>
         `;
 
         document.body.appendChild(this.sidebar);
         document.getElementById('pvz-close').onclick = () => this.hideSidebar();
         document.getElementById('pvz-stop').onclick = () => this.stop();
+        
+        this.renderLog();
+        this.updateSidebarDisplay();
     }
 
     addLog(message, type = 'info') {
         this.logEntries.push({ time: new Date().toLocaleTimeString(), message, type });
-        this.saveStateToStorage(); // Синхронизируем логи в хранилище
+        this.saveStateToStorage(); 
         this.renderLog();
     }
 
@@ -480,6 +556,6 @@ class PVZTariffCreator {
     }
 }
 
-// Переинициализация синглтона при перезагрузках страницы
 window.pvzTariffCreator = new PVZTariffCreator();
-window.startPVZTariffCreationFromExcel = f => window.pvzTariffCreator.startFromExcel(f);
+// Вызывай эту функцию для открытия интерфейса (например, из консоли или прикрепи к кнопке в расширении)
+window.openPVZTariffCreator = () => window.pvzTariffCreator.openMenu();
