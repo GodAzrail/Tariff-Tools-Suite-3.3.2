@@ -1,5 +1,4 @@
-// tariff-page-collector.js
-// Faster collector: waits for modal readiness instead of hard 2s + 1s delays
+
 (function() {
     'use strict';
 
