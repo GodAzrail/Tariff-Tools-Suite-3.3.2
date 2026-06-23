@@ -1,6 +1,3 @@
-// resize-core.js - compatibility fix with watchDialog()
-// Keeps old resize wrappers working, but disables any resize/position changes on /configurator/tariffs
-
 (function () {
   if (window.TariffResizeCore && typeof window.TariffResizeCore.watchDialog === 'function') {
     console.log('[ResizeCore] TariffResizeCore with watchDialog already exists');
