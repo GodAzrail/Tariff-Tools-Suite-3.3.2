@@ -20,7 +20,7 @@
             this.currentCardForMenu = null;
             this.currentTariffIdForMenu = null;
             
-            console.log('[TariffCustomizer] ========== ИНИЦИАЛИЗАЦИЯ v20 (Deep Scan) ==========');
+            console.log('[TariffCustomizer] ========== ИНИЦИАЛИЗАЦИЯ ==========');
             
             this.loadSettings();
             this.injectGlobalStyles();
@@ -50,7 +50,7 @@
 
                 if (hasCards) {
                     this.assembleCustomization();
-                } else if (attempts < 50) { // Ищем карточки в течение 10 секунд
+                } else if (attempts < 50) { 
                     attempts++;
                     setTimeout(check, 200);
                 }
@@ -124,7 +124,7 @@
             return window.__tariffExportPauseCustomizer === true || localStorage.getItem('tariff_export_pause_customizer') === '1';
         }
 
-        // УМНЫЙ СКАНЕР с "рентгеновским зрением" (Deep Scan)
+        // УМНЫЙ СКАНЕР 
         setupSmartObserver() {
             const observer = new MutationObserver((mutations) => {
                 if (this.isUpdating || this.isExportPauseActive() || !window.location.href.includes('/tariffs/')) return;
