@@ -1,4 +1,4 @@
-// content.js - Компактная панель управления тарифами (упрощенная версия)
+
 console.log('🚀 Auto Filler загружен');
 
 let currentTableData = null;
