@@ -1,5 +1,3 @@
-
-
 (function() {
     'use strict';
 
@@ -68,7 +66,7 @@
                 if (this.isCreatePage()) {
                     console.log('[TariffCreatorPro] 🎉 Обнаружена форма создания тарифа');
                     this.importStarted = true;
-                    setTimeout(() => this.startImportOnCreatePage(), 1200);
+                    setTimeout(() => this.startImportOnCreatePage(), 600);
                 }
             }, 500);
         }
@@ -157,11 +155,14 @@
             this.renderLog();
         }
 
+        // === ИНТЕРФЕЙС И ОТОБРАЖЕНИЕ (С ДИЗАЙНОМ PVZ) ===
+
         renderLog() {
             const logDiv = document.getElementById('tariff-create-log');
             if (!logDiv) return;
             logDiv.innerHTML = '';
             const colors = { success: '#4ade80', error: '#f87171', info: '#60a5fa', warning: '#fbbf24' };
+            
             if (this.logEntries.length === 0) {
                 const empty = document.createElement('div');
                 empty.style.color = '#60a5fa';
@@ -169,10 +170,11 @@
                 logDiv.appendChild(empty);
                 return;
             }
+            
             for (const entry of this.logEntries) {
                 const div = document.createElement('div');
-                div.style.cssText = 'margin-bottom: 6px; padding: 4px 0; border-bottom: 1px solid #334155; font-size: 11px;';
-                div.style.color = colors[entry.type] || '#94a3b8';
+                div.style.color = colors[entry.type] || '#cbd5e1';
+                div.style.marginBottom = '4px';
                 div.textContent = `[${entry.time}] ${entry.message}`;
                 logDiv.appendChild(div);
             }
@@ -220,7 +222,7 @@
             this.sidebar = document.createElement('div');
             this.sidebar.id = id;
             this.sidebar.style.cssText = `
-                position: fixed; top: 0; right: 0; width: 450px; height: 100vh;
+                position: fixed; top: 0; right: 0; width: 420px; height: 100vh;
                 background: #1e293b; box-shadow: -2px 0 20px rgba(0,0,0,0.3); z-index: 1000002;
                 display: flex; flex-direction: column; font-family: 'Segoe UI', Arial, sans-serif;
                 border-left: 1px solid #334155;
@@ -232,56 +234,47 @@
                         <div style="color: #94a3b8; font-size: 11px; margin-top: 4px;">${subtitle}</div>
                     </div>
                     <div style="display: flex; gap: 8px;">
-                        <button id="tariff-create-minimize" style="background: none; border: none; color: #94a3b8; font-size: 18px; cursor: pointer; padding: 4px 8px;">−</button>
-                        <button id="tariff-create-close" style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; padding: 4px 8px;">×</button>
+                        <button id="${id}-minimize" style="background: none; border: none; color: #94a3b8; font-size: 22px; cursor: pointer; padding: 0; line-height: 1;"></button>
+                        <button id="${id}-close" style="background: none; border: none; color: #94a3b8; font-size: 22px; cursor: pointer; padding: 0; line-height: 1;">×</button>
                     </div>
                 </div>
+                <div id="tariff-create-content" style="padding: 16px; flex: 1; display: flex; flex-direction: column; min-height: 0;"></div>
             `;
             document.body.appendChild(this.sidebar);
-            document.getElementById('tariff-create-close').onclick = () => this.hideSidebar();
-            document.getElementById('tariff-create-minimize').onclick = () => this.minimizeSidebar();
+            document.getElementById(`${id}-close`).onclick = () => this.hideSidebar();
+            document.getElementById(`${id}-minimize`).onclick = () => this.minimizeSidebar();
         }
 
         createConfigSidebar() {
-            this.createBaseSidebar('tariff-create-config-sidebar', '➕ Массовое создание тарифов', 'Создание новых тарифов из Excel', '#10b981');
-
-            const content = document.createElement('div');
-            content.style.cssText = 'display:flex; flex-direction:column; flex:1 1 auto; min-height:0; overflow:hidden;';
+            this.createBaseSidebar('tariff-create-config-sidebar', '📦 Курьерская доставка -Тарифы ', 'Создание новых тарифов из Excel', '#60a5fa');
+            const content = this.sidebar.querySelector('#tariff-create-content');
+            
             content.innerHTML = `
-                <div style="padding: 16px; background: #0f172a; margin: 16px; border-radius: 8px;">
-                    <div style="margin-bottom: 12px;">
-                        <label style="color: #94a3b8; font-size: 12px; display: block; margin-bottom: 6px;">📁 Excel файл</label>
-                        <input type="file" id="tariff-create-file-input" accept=".xls,.xlsx,.xlsm" style="background: #334155; color: white; border: none; padding: 8px; border-radius: 6px; width: 100%; cursor: pointer;">
-                    </div>
-                    <div style="color:#94a3b8; font-size:11px; line-height:1.5;">
-                        Формат колонок такой же, как в импорте/обновлении: название, зоны, филиалы, интервалы, цены, способы оплаты и виды продажи.
-                    </div>
-                </div>
-
-                <div id="tariff-create-status-box" style="background: #0f172a; margin: 0 16px 16px 16ms; padding: 12px; border-radius: 8px; border-left: 3px solid #10b981;">
-                    <div style="color: #10b981; font-size: 13px; font-weight: 500;" id="tariff-create-status-title">📋 Выберите файл</div>
+                <div id="tariff-create-status-box" style="margin-bottom: 16px; background: #0f172a; padding: 12px; border-radius: 8px; border-left: 3px solid #60a5fa;">
+                    <div style="color: #60a5fa; font-size: 13px; font-weight: 500;" id="tariff-create-status-title">📋 Выберите файл</div>
                     <div style="color: #94a3b8; font-size: 11px; margin-top: 6px;" id="tariff-create-status-detail">После выбора файла нажмите «Начать создание»</div>
                 </div>
 
-                <div style="margin: 0 16ms 16ms 16ms;">
-                    <div style="height: 8px; background: #334155; border-radius: 4px; overflow: hidden;">
-                        <div id="tariff-create-progress-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #10b981, #059669);"></div>
-                    </div>
-                    <div id="tariff-create-progress-text" style="text-align: center; font-size: 12px; color: #94a3b8; margin-top:4px;">0%</div>
+                <div style="margin-bottom: 16px; position: relative; background: #334155; border: 2px dashed #64748b; border-radius: 8px; padding: 20px 16px; text-align: center; transition: all 0.2s ease;">
+                     <input type="file" id="tariff-create-file-input" accept=".xls,.xlsx,.xlsm" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10;" 
+                     onmouseover="this.parentElement.style.borderColor='#60a5fa'; this.parentElement.style.background='#475569';" 
+                    onmouseout="this.parentElement.style.borderColor='#64748b'; this.parentElement.style.background='#334155';">
+                  <div style="font-size: 28px; margin-bottom: 8px; pointer-events: none; opacity: 0.9;">📄</div>
+                  <div style="color: #f8fafc; font-size: 14px; font-weight: 500; margin-bottom: 4px; pointer-events: none;">1. Выберите файл Excel</div>
+                  <div id="tariff-create-file-status" style="font-size: 12px; color: #cbd5e1; pointer-events: none;">Нажмите и выберите файл (.xls, .xlsx)</div>
                 </div>
 
-                <div style="display: flex; justify-content: space-between; margin: 0 16ms 4px 16ms; align-items: center;">
-                    <div style="color: #94a3b8; font-size: 11px;">Логи:</div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px; align-items: center;">
+                    <div style="color: #94a3b8; font-size: 12px;">Логи подготовки:</div>
                     <button id="tariff-create-clear-log" style="background: none; border: none; color: #ef4444; font-size: 11px; cursor: pointer; padding: 0;">🗑️ Очистить</button>
                 </div>
-                <div id="tariff-create-log" style="flex: 1 1 auto; min-height: 0; background: #0f172a; margin: 0 16ms 16ms 16ms; padding: 12px; border-radius: 8px; overflow-y: auto; overflow-x: hidden; font-size: 11px; line-height: 1.4; font-family: monospace; white-space: pre-wrap; word-break: break-word;"></div>
+                <div id="tariff-create-log" style="flex: 1; background: #0f172a; border-radius: 8px; padding: 12px; overflow-y: auto; font-size: 12px; font-family: monospace; margin-bottom: 16px; border: 1px solid #334155;"></div>
 
-                <div style="padding: 16px; border-top: 1px solid #334155; display:flex; gap:8px;">
-                    <button id="tariff-create-start" style="flex:1; padding: 10px; background: linear-gradient(135deg, #10b981, #059669); color:white; border:none; border-radius:6px; cursor:pointer;">🚀 Начать создание</button>
-                    <button id="tariff-create-stop" style="flex:1; padding: 10px; background: #dc2626; color:white; border:none; border-radius:6px; cursor:pointer; display:none;">⏹️ Остановить</button>
+                <div style="display: flex; gap: 8px;">
+                    <button id="tariff-create-start" disabled style="width: 100%; padding: 12px; background: #475569; color: #94a3b8; border: none; border-radius: 6px; cursor: not-allowed; font-weight: bold; font-size: 14px; transition: 0.2s;">🚀 2. Начать создание</button>
+                    <button id="tariff-create-stop" style="flex: 1; padding: 12px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; display: none;">⏹️ Остановить</button>
                 </div>
             `;
-            this.sidebar.appendChild(content);
 
             document.getElementById('tariff-create-file-input').onchange = (e) => this.loadExcelFile(e.target.files[0]);
             document.getElementById('tariff-create-start').onclick = () => this.startImport();
@@ -297,34 +290,35 @@
         }
 
         createProgressSidebar() {
-            this.createBaseSidebar('tariff-create-progress-sidebar', '➕ Массовое создание тарифов', 'Создание новых тарифов из Excel', '#10b981');
-
-            const content = document.createElement('div');
-            content.style.cssText = 'display:flex; flex-direction:column; flex:1 1 auto; min-height:0; overflow:hidden;';
+            this.createBaseSidebar('tariff-create-progress-sidebar', '⏳ Идёт создание...', 'Создание новых тарифов из Excel', '#60a5fa');
+            const content = this.sidebar.querySelector('#tariff-create-content');
+            
             content.innerHTML = `
-                <div id="tariff-create-status-box" style="background: #0f172a; margin: 16px; padding: 12px; border-radius: 8px; border-left: 3px solid #10b981;">
-                    <div style="color: #10b981; font-size: 13px; font-weight: 500;" id="tariff-create-status-title">⏳ Подготовка</div>
+                <div style="margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px; color: #94a3b8; font-size: 13px;">
+                        <span>Прогресс</span>
+                        <span id="tariff-create-progress-text">0 / 0</span>
+                    </div>
+                    <div style="height: 8px; background: #334155; border-radius: 4px; overflow: hidden;">
+                        <div id="tariff-create-progress-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #3b82f6, #60a5fa);"></div>
+                    </div>
+                </div>
+
+                <div id="tariff-create-status-box" style="margin-bottom: 16px; background: #0f172a; padding: 12px; border-radius: 8px; border-left: 3px solid #60a5fa;">
+                    <div style="color: #60a5fa; font-size: 13px; font-weight: 500;" id="tariff-create-status-title">⏳ Подготовка</div>
                     <div style="color: #94a3b8; font-size: 11px; margin-top: 6px;" id="tariff-create-status-detail">Ожидание перехода на форму создания</div>
                 </div>
-                <div style="margin: 0 16ms 16ms 16ms;">
-                    <div style="height: 8px; background: #334155; border-radius: 4px; overflow: hidden;">
-                        <div id="tariff-create-progress-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #10b981, #059669);"></div>
-                    </div>
-                    <div id="tariff-create-progress-text" style="text-align: center; font-size: 12px; color: #94a3b8; margin-top:4px;">0%</div>
-                </div>
                 
-                <div style="display: flex; justify-content: space-between; margin: 0 16ms 4px 16ms; align-items: center;">
-                    <div style="color: #94a3b8; font-size: 11px;">Логи:</div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px; align-items: center;">
+                    <div style="color: #94a3b8; font-size: 12px;">Логи:</div>
                     <button id="tariff-create-clear-log" style="background: none; border: none; color: #ef4444; font-size: 11px; cursor: pointer; padding: 0;">🗑️ Очистить</button>
                 </div>
-                <div id="tariff-create-log" style="flex: 1 1 auto; min-height: 0; background: #0f172a; margin: 0 16ms 16ms 16ms; padding: 12px; border-radius: 8px; overflow-y: auto; overflow-x: hidden; font-size: 11px; line-height: 1.4; font-family: monospace; white-space: pre-wrap; word-break: break-word;"></div>
+                <div id="tariff-create-log" style="flex: 1; background: #0f172a; border-radius: 8px; padding: 12px; overflow-y: auto; font-size: 12px; font-family: monospace; margin-bottom: 16px; border: 1px solid #334155;"></div>
                 
-                <div style="padding: 16px; border-top: 1px solid #334155; display:flex; gap:8px;">
-                    <button id="tariff-create-start" style="flex:1; padding: 10px; background: #334155; color:#cbd5e1; border:none; border-radius:6px; cursor:default;" disabled>▶️ В процессе</button>
-                    <button id="tariff-create-stop" style="flex:1; padding: 10px; background: #dc2626; color:white; border:none; border-radius:6px; cursor:pointer;">⏹️ Остановить</button>
+                <div style="padding-top: 16px; border-top: 1px solid #334155;">
+                    <button id="tariff-create-stop" style="width: 100%; padding: 10px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">⏹️ Остановить</button>
                 </div>
             `;
-            this.sidebar.appendChild(content);
             document.getElementById('tariff-create-stop').onclick = () => this.stopImport();
             document.getElementById('tariff-create-clear-log').onclick = () => {
                 this.logEntries = [];
@@ -347,9 +341,10 @@
             const detail = document.getElementById('tariff-create-status-detail');
             const startBtn = document.getElementById('tariff-create-start');
             const stopBtn = document.getElementById('tariff-create-stop');
+            const fileStatus = document.getElementById('tariff-create-file-status');
 
             if (fill) fill.style.width = `${percent}%`;
-            if (text) text.textContent = `${percent}% (${completed}/${total})`;
+            if (text) text.textContent = `${completed} / ${total}`;
 
             if (title) {
                 if (!total) title.textContent = '📋 Выберите файл';
@@ -364,9 +359,35 @@
                 else detail.textContent = `Всего загружено ${total} тарифов`;
             }
 
-            if (startBtn && !startBtn.disabled) startBtn.style.display = this.isImporting ? 'none' : 'block';
+            if (fileStatus) {
+                if (total > 0) {
+                    fileStatus.textContent = `Готово к загрузке: ${total} шт.`;
+                    fileStatus.style.color = '#4ade80';
+                } else {
+                    fileStatus.textContent = 'Нажмите и выберите файл (.xls, .xlsx)';
+                    fileStatus.style.color = '#cbd5e1';
+                }
+            }
+
+            if (startBtn) {
+                startBtn.style.display = this.isImporting ? 'none' : 'block';
+                if (total > 0) {
+                    startBtn.disabled = false;
+                    startBtn.style.background = '#3b82f6';
+                    startBtn.style.color = '#ffffff';
+                    startBtn.style.cursor = 'pointer';
+                } else {
+                    startBtn.disabled = true;
+                    startBtn.style.background = '#475569';
+                    startBtn.style.color = '#94a3b8';
+                    startBtn.style.cursor = 'not-allowed';
+                }
+            }
+            
             if (stopBtn) stopBtn.style.display = this.isImporting ? 'block' : 'none';
         }
+
+        // ==================== ЛОГИКА И ПАРСИНГ ====================
 
         saveConfig() {
             localStorage.setItem(this.storageKeys.config, JSON.stringify(this.config));
@@ -590,11 +611,9 @@
         }
 
         async openCreatePageFromList() {
-            // Делаем несколько попыток с интервалом (до 5 секунд ожидания), так как SPA рендерит интерфейс с задержкой
             for (let attempts = 0; attempts < 10; attempts++) {
                 if (this.shouldStop) return;
 
-                // 1. Вдруг форма создания УЖЕ открылась (система запомнила состояние или медленный рендер)
                 if (this.isCreatePage() && this.findNameInput()) {
                     this.addSidebarLog('💡 Обнаружена форма создания, продолжаем заполнение', 'info');
                     this.importStarted = true;
@@ -602,7 +621,6 @@
                     return;
                 }
 
-                // 2. Ищем кнопку "Создать"
                 const buttons = Array.from(document.querySelectorAll('button'));
                 const createBtn = buttons.find(btn => {
                     const text = (btn.textContent || '').trim();
@@ -612,14 +630,12 @@
                 if (createBtn) {
                     createBtn.click();
                     this.addSidebarLog('🖱️ Нажата кнопка «Создать» на текущей странице тарифов', 'info');
-                    return; // Выходим из функции, дальше сработает registerPageWatchers, когда форма откроется
+                    return;
                 }
 
-                // Ждем 500мс перед следующей проверкой
                 await this.delay(500);
             }
 
-            // Если за 5 секунд ничего не нашлось
             this.addSidebarLog('❌ Кнопка «Создать» или форма создания тарифа не найдены', 'error');
             this.stopImport();
         }
@@ -667,7 +683,6 @@
                     return;
                 }
 
-                // Ускоренный возврат к списку для следующего тарифа
                 this.addSidebarLog('↩️ Переходим к стартовой странице...', 'info');
                 setTimeout(() => {
                     window.location.href = this.baseTariffsUrl || `${window.location.origin}/configurator/tariffs/`;
@@ -691,9 +706,6 @@
             this.updateSidebarDisplay();
         }
 
-        /**
-         * Завершает импорт и ВОЗВРАЩАЕТ на стартовую страницу.
-         */
         finishImport() {
             this.isImporting = false;
             this.importStarted = false;
@@ -701,14 +713,12 @@
             this.updateSidebarDisplay();
             this.clearStorage();
 
-            // === НОВОЕ: Возврат на стартовую страницу после завершения всех тарифов ===
             if (this.baseTariffsUrl) {
                 this.addSidebarLog('↩️ Возвращаемся на стартовую страницу...', 'info');
                 setTimeout(() => {
                     window.location.href = this.baseTariffsUrl;
                 }, 1200);
             } else {
-                // fallback если URL почему-то не сохранён
                 this.addSidebarLog('ℹ️ Стартовый URL не найден, остаёмся на текущей странице', 'warning');
             }
         }
@@ -723,7 +733,7 @@
 
         setCreateFailure(step, details = {}) {
             this.lastCreateFailure = { step, details, url: window.location.href, timestamp: new Date().toISOString() };
-            this.addSidebarLog(`❌ createTariff: ${step}`, 'error');
+            this.addSidebarLog(`❌ Ошибка: ${step}`, 'error');
             return false;
         }
 
@@ -767,7 +777,7 @@
                 if (!this.ensureCanContinue(`перед блоком ${block.label}`)) return false;
                 await block.run();
                 if (!this.ensureCanContinue(`после блока ${block.label}`)) return false;
-                await this.delay(300); // ускорено с 400
+                await this.delay(300);
             }
 
             if (!this.ensureCanContinue(`перед названием тарифа`)) return false;
@@ -776,14 +786,14 @@
             let attempts = 0;
             while (!nameInput && attempts < 20) {
                 nameInput = document.querySelector('input[placeholder*="Введите название тарифа"]');
-                if (!nameInput) await this.delay(250); // ускорено
+                if (!nameInput) await this.delay(250);
                 attempts++;
             }
             if (!nameInput) return this.setCreateFailure('name_input_not_found');
 
             this.setInputValue(nameInput, tariff.name);
             nameInput.blur();
-            await this.delay(200); // ускорено
+            await this.delay(200);
 
             let saveButton = null;
             attempts = 0;
@@ -795,13 +805,13 @@
                         break;
                     }
                 }
-                if (!saveButton) await this.delay(400); // ускорено
+                if (!saveButton) await this.delay(400);
                 attempts++;
             }
             if (!saveButton) return this.setCreateFailure('save_button_not_found');
 
             saveButton.click();
-            await this.delay(1800); // ускорено с 2500
+            await this.delay(1800);
             return true;
         }
 
@@ -812,7 +822,7 @@
                     btn.textContent.trim() === 'Сохранить' && !btn.closest('dialog[open]') && !btn.disabled
                 );
                 if (nameInput && saveButton) return { nameInput, saveButton };
-                await this.delay(200); // ускорено
+                await this.delay(200);
             }
             return { nameInput: document.querySelector('input[placeholder*="Введите название тарифа"]'), saveButton: null };
         }
@@ -821,7 +831,7 @@
             return new Promise(resolve => {
                 const target = Number(ms) || 0;
                 if (target <= 0) return resolve();
-                const step = Math.min(60, target); // чуть быстрее polling
+                const step = Math.min(60, target);
                 let elapsed = 0;
                 const timer = setInterval(() => {
                     elapsed += step;
@@ -902,11 +912,11 @@
             if (expectedState === undefined) return false;
             for (let attempt = 0; attempt < 5; attempt++) {
                 const target = this.findSaleTypeCheckbox(labelText, idPart);
-                if (!target) { await this.delay(150); continue; } // ускорено
+                if (!target) { await this.delay(150); continue; }
                 const before = this.isSaleTypeChecked(target);
                 if (before === expectedState) return true;
                 this.triggerSaleTypeClick(target);
-                await this.delay(200); // ускорено
+                await this.delay(200);
                 const refreshed = this.findSaleTypeCheckbox(labelText, idPart) || target;
                 if (this.isSaleTypeChecked(refreshed) === expectedState) return true;
             }
@@ -928,13 +938,13 @@
             }
             if (!pencilIcon) return false;
             pencilIcon.click();
-            await this.delay(1000); // ускорено с 1400
+            await this.delay(1000);
 
             let dialog = null;
             let attempts = 0;
             while (!dialog && attempts < 20) {
                 dialog = document.querySelector('dialog[open]');
-                if (!dialog) await this.delay(300); // ускорено
+                if (!dialog) await this.delay(300);
                 attempts++;
             }
             if (!dialog) return false;
@@ -943,13 +953,13 @@
                 const zoneCheckbox = this.findCheckboxByText(dialog, zoneName);
                 if (zoneCheckbox && !zoneCheckbox.checked) {
                     zoneCheckbox.click();
-                    await this.delay(150); // ускорено
+                    await this.delay(150);
                 }
             }
             const saveBtn = Array.from(dialog.querySelectorAll('button')).find(b => b.textContent.trim() === 'Сохранить');
             if (saveBtn) {
                 saveBtn.click();
-                await this.delay(800); // ускорено с 1200
+                await this.delay(800);
             }
             return true;
         }
@@ -969,7 +979,7 @@
             }
             if (!pencilIcon) return false;
             pencilIcon.click();
-            await this.delay(1000); // ускорено
+            await this.delay(1000);
 
             let dialog = null;
             let attempts = 0;
@@ -1010,7 +1020,7 @@
             }
             if (!pencilIcon) return false;
             pencilIcon.click();
-            await this.delay(1000); // ускорено
+            await this.delay(1000);
 
             let dialog = null;
             let attempts = 0;
@@ -1046,7 +1056,7 @@
                 const transferBtn = dialog.querySelector('#af-transfer-all');
                 if (transferBtn) {
                     transferBtn.click();
-                    await this.delay(1200); // ускорено с 1800
+                    await this.delay(1200);
                 }
 
                 let saveButton = null;
@@ -1081,7 +1091,7 @@
             const pencilIcon = titleSpan?.parentElement?.querySelector('span[class*="pencil"], .icomoon-icon__pencil');
             if (!pencilIcon) return false;
             pencilIcon.click();
-            await this.delay(700); // ускорено с 900
+            await this.delay(700);
 
             let dialog = null;
             for (let attempts = 0; attempts < 18; attempts++) {

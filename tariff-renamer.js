@@ -1,4 +1,3 @@
-
 (function() {
     'use strict';
 
@@ -139,7 +138,7 @@
 
         addSidebarLog(message, type = 'info') {
             const entry = {
-                time: new Date().toLocaleTimeString(),
+                time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
                 message,
                 type
             };
@@ -154,6 +153,8 @@
             }, 100);
         }
 
+        // ==================== ИНТЕРФЕЙС И ОТОБРАЖЕНИЕ ====================
+
         renderLog() {
             const logDiv = document.getElementById('sidebar-rename-log');
             if (!logDiv) return;
@@ -161,7 +162,7 @@
             logDiv.innerHTML = '';
             if (this.logEntries.length === 0) {
                 const emptyMsg = document.createElement('div');
-                emptyMsg.style.color = '#60a5fa';
+                emptyMsg.style.color = '#c084fc';
                 emptyMsg.textContent = '💡 Готов к переименованию';
                 logDiv.appendChild(emptyMsg);
                 return;
@@ -176,11 +177,8 @@
 
             for (const entry of this.logEntries) {
                 const entryDiv = document.createElement('div');
-                entryDiv.style.color = colors[entry.type] || '#94a3b8';
-                entryDiv.style.marginBottom = '6px';
-                entryDiv.style.padding = '4px 0';
-                entryDiv.style.borderBottom = '1px solid #334155';
-                entryDiv.style.fontSize = '11px';
+                entryDiv.style.color = colors[entry.type] || '#cbd5e1';
+                entryDiv.style.marginBottom = '4px';
                 entryDiv.textContent = `[${entry.time}] ${entry.message}`;
                 logDiv.appendChild(entryDiv);
             }
@@ -190,13 +188,240 @@
             });
         }
 
-        getValidRows() {
-            return (this.renameRows || [])
-                .map(row => ({
-                    currentName: String(row.currentName || '').trim(),
-                    newName: String(row.newName || '').trim()
-                }))
-                .filter(row => row.currentName && row.newName);
+        createBaseSidebar(id, title, subtitle, accent) {
+            if (this.sidebar) this.sidebar.remove();
+            
+            this.sidebar = document.createElement('div');
+            this.sidebar.id = id;
+            this.sidebar.style.cssText = `
+                position: fixed; top: 0; right: 0; width: 420px; height: 100vh;
+                background: #1e293b; box-shadow: -2px 0 20px rgba(0,0,0,0.3); z-index: 1000002;
+                display: flex; flex-direction: column; font-family: 'Segoe UI', Arial, sans-serif;
+                border-left: 1px solid #334155; transition: transform 0.3s ease;
+            `;
+
+            this.sidebar.innerHTML = `
+                <div style="padding: 16px 20px; background: #0f172a; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3 style="color: ${accent}; margin: 0; font-size: 18px;">${title}</h3>
+                        <div style="color: #94a3b8; font-size: 11px; margin-top: 4px;">${subtitle}</div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button id="sidebar-rename-minimize" style="background: none; border: none; color: #94a3b8; font-size: 22px; cursor: pointer; padding: 0; line-height: 1;"></button>
+                        <button id="sidebar-rename-close" style="background: none; border: none; color: #94a3b8; font-size: 22px; cursor: pointer; padding: 0; line-height: 1;">×</button>
+                    </div>
+                </div>
+                <div id="sidebar-content" style="padding: 16px; flex: 1; display: flex; flex-direction: column; min-height: 0;"></div>
+            `;
+
+            document.body.appendChild(this.sidebar);
+            document.getElementById('sidebar-rename-close').onclick = () => this.hideSidebar();
+            document.getElementById('sidebar-rename-minimize').onclick = () => this.minimizeSidebar();
+        }
+
+        createConfigSidebar() {
+            this.createBaseSidebar('tariff-rename-config-sidebar', '✏️ Переименование', 'Массовое переименование тарифов', '#c084fc');
+            const content = this.sidebar.querySelector('#sidebar-content');
+
+            content.innerHTML = `
+                <div style="margin-bottom: 16px; display: flex; gap: 8px;">
+                    <button id="sidebar-rename-download" style="flex: 1; padding: 12px; background: #334155; color: #c084fc; border: 1px solid #c084fc; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s;">📥 1. Скачать шаблон тарифов</button>
+                </div>
+
+                <div id="sidebar-rename-status-box" style="margin-bottom: 16px; background: #0f172a; padding: 12px; border-radius: 8px; border-left: 3px solid #c084fc;">
+                    <div style="color: #c084fc; font-size: 13px; font-weight: 500;" id="sidebar-rename-status-title">📋 Загрузите данные</div>
+                    <div style="color: #94a3b8; font-size: 11px; margin-top: 6px;" id="sidebar-rename-status-detail">Заполните шаблон и выберите файл</div>
+                </div>
+
+                <div style="margin-bottom: 16px; position: relative; background: #334155; border: 2px dashed #64748b; border-radius: 8px; padding: 20px 16px; text-align: center; transition: all 0.2s ease;">
+                     <input type="file" id="sidebar-rename-file" accept=".xls,.xlsx,.xlsm" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10;" 
+                     onmouseover="this.parentElement.style.borderColor='#c084fc'; this.parentElement.style.background='#475569';" 
+                    onmouseout="this.parentElement.style.borderColor='#64748b'; this.parentElement.style.background='#334155';">
+                  <div style="font-size: 28px; margin-bottom: 8px; pointer-events: none; opacity: 0.9;">📄</div>
+                  <div style="color: #f8fafc; font-size: 14px; font-weight: 500; margin-bottom: 4px; pointer-events: none;">2. Выберите файл Excel</div>
+                  <div id="sidebar-rename-file-status" style="font-size: 12px; color: #cbd5e1; pointer-events: none;">Нажмите и выберите файл (.xls, .xlsx)</div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px; align-items: center;">
+                    <div style="color: #94a3b8; font-size: 12px;">Логи подготовки:</div>
+                    <button id="sidebar-rename-clear-log" style="background: none; border: none; color: #ef4444; font-size: 11px; cursor: pointer; padding: 0;">🗑️ Очистить</button>
+                </div>
+                <div id="sidebar-rename-log" style="flex: 1; background: #0f172a; border-radius: 8px; padding: 12px; overflow-y: auto; font-size: 12px; font-family: monospace; margin-bottom: 16px; border: 1px solid #334155;"></div>
+
+                <div style="display: flex; gap: 8px;">
+                    <button id="sidebar-rename-start-btn" disabled style="width: 100%; padding: 12px; background: #475569; color: #94a3b8; border: none; border-radius: 6px; cursor: not-allowed; font-weight: bold; font-size: 14px; transition: 0.2s;">🚀 3. Начать переименование</button>
+                    <button id="sidebar-rename-stop-btn" style="flex: 1; padding: 12px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; display: none;">⏹️ Остановить</button>
+                </div>
+            `;
+
+            document.getElementById('sidebar-rename-download').onclick = () => this.downloadTemplate();
+            document.getElementById('sidebar-rename-file').onchange = (e) => this.loadExcelFile(e.target.files[0]);
+            document.getElementById('sidebar-rename-start-btn').onclick = () => this.startRename();
+            document.getElementById('sidebar-rename-stop-btn').onclick = () => this.stopRename();
+            document.getElementById('sidebar-rename-clear-log').onclick = () => {
+                this.logEntries = [];
+                this.saveLogToStorage();
+                this.renderLog();
+            };
+        }
+
+        createProgressSidebar() {
+            this.createBaseSidebar('tariff-rename-progress-sidebar', '⏳ Идёт переименование...', 'Массовое переименование тарифов', '#c084fc');
+            const content = this.sidebar.querySelector('#sidebar-content');
+
+            content.innerHTML = `
+                <div style="margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px; color: #94a3b8; font-size: 13px;">
+                        <span>Прогресс</span>
+                        <span id="sidebar-rename-progress-text">0 / 0</span>
+                    </div>
+                    <div style="height: 8px; background: #334155; border-radius: 4px; overflow: hidden;">
+                        <div id="sidebar-rename-progress-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #a855f7, #c084fc);"></div>
+                    </div>
+                </div>
+
+                <div id="sidebar-rename-status-box" style="margin-bottom: 16px; background: #0f172a; padding: 12px; border-radius: 8px; border-left: 3px solid #c084fc;">
+                    <div style="color: #c084fc; font-size: 13px; font-weight: 500;" id="sidebar-rename-status-title">⏳ Подготовка</div>
+                    <div style="color: #94a3b8; font-size: 11px; margin-top: 6px;" id="sidebar-rename-status-detail">Ожидание перехода на форму...</div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px; align-items: center;">
+                    <div style="color: #94a3b8; font-size: 12px;">Логи:</div>
+                    <button id="sidebar-rename-clear-log" style="background: none; border: none; color: #ef4444; font-size: 11px; cursor: pointer; padding: 0;">🗑️ Очистить</button>
+                </div>
+                <div id="sidebar-rename-log" style="flex: 1; background: #0f172a; border-radius: 8px; padding: 12px; overflow-y: auto; font-size: 12px; font-family: monospace; margin-bottom: 16px; border: 1px solid #334155;"></div>
+
+                <div style="padding-top: 16px; border-top: 1px solid #334155;">
+                    <button id="sidebar-rename-stop-btn" style="width: 100%; padding: 10px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">⏹️ Остановить</button>
+                </div>
+            `;
+
+            document.getElementById('sidebar-rename-stop-btn').onclick = () => this.stopRename();
+            document.getElementById('sidebar-rename-clear-log').onclick = () => {
+                this.logEntries = [];
+                this.saveLogToStorage();
+                this.renderLog();
+            };
+        }
+
+        updateSidebarDisplay() {
+            if (!this.sidebar) return;
+
+            const title = document.getElementById('sidebar-rename-status-title');
+            const detail = document.getElementById('sidebar-rename-status-detail');
+            const fill = document.getElementById('sidebar-rename-progress-fill');
+            const text = document.getElementById('sidebar-rename-progress-text');
+            const startBtn = document.getElementById('sidebar-rename-start-btn');
+            const stopBtn = document.getElementById('sidebar-rename-stop-btn');
+            const fileStatus = document.getElementById('sidebar-rename-file-status');
+
+            const total = this.getValidRows().length;
+            const current = Math.min(this.currentIndex, total);
+            const progress = total > 0 ? Math.round((current / total) * 100) : 0;
+
+            if (fill) fill.style.width = `${progress}%`;
+            if (text) text.textContent = total > 0 ? `${current} / ${total}` : '0 / 0';
+
+            if (this.isRenaming) {
+                if (title) title.textContent = `🔄 Переименование тарифа ${Math.min(this.currentIndex + 1, total)} из ${total}`;
+                if (detail) detail.textContent = this.isEditFormPage() ? 'Заполняем новые данные на странице' : 'Открываем карточку тарифа...';
+                if (startBtn) startBtn.style.display = 'none';
+                if (stopBtn) stopBtn.style.display = 'block';
+            } else {
+                if (title) title.textContent = total > 0 ? '✅ Данные загружены' : '📋 Выберите файл';
+                if (detail) detail.textContent = total > 0
+                    ? `Готово к запуску: ${total} записей`
+                    : 'Скачайте шаблон, заполните новый столбец и загрузите файл';
+                
+                if (fileStatus) {
+                    if (total > 0) {
+                        fileStatus.textContent = `Готово к обновлению: ${total} шт.`;
+                        fileStatus.style.color = '#4ade80';
+                    } else {
+                        fileStatus.textContent = 'Нажмите и выберите файл (.xls, .xlsx)';
+                        fileStatus.style.color = '#cbd5e1';
+                    }
+                }
+
+                if (startBtn) {
+                    startBtn.style.display = 'block';
+                    if (total > 0) {
+                        startBtn.disabled = false;
+                        startBtn.style.background = '#a855f7';
+                        startBtn.style.color = '#ffffff';
+                        startBtn.style.cursor = 'pointer';
+                    } else {
+                        startBtn.disabled = true;
+                        startBtn.style.background = '#475569';
+                        startBtn.style.color = '#94a3b8';
+                        startBtn.style.cursor = 'not-allowed';
+                    }
+                }
+                if (stopBtn) stopBtn.style.display = 'none';
+            }
+        }
+
+        showConfigSidebar() {
+            const savedData = localStorage.getItem(this.dataKey);
+            if (savedData) {
+                try {
+                    const data = JSON.parse(savedData);
+                    if (data.rows && data.rows.length > 0) {
+                        this.renameRows = data.rows;
+                        this.currentIndex = data.currentIndex || 0;
+                        this.isRenaming = this.currentIndex < this.renameRows.length;
+                    }
+                } catch (error) {
+                    console.warn('[TariffRenamer] showConfigSidebar read data error', error);
+                }
+            }
+
+            if (this.isRenaming && this.renameRows.length > 0) {
+                this.createProgressSidebar();
+            } else {
+                this.createConfigSidebar();
+            }
+
+            this.showSidebar();
+            this.updateSidebarDisplay();
+            this.restoreLogFromStorage();
+        }
+
+        showSidebar() {
+            if (this.sidebar) {
+                this.sidebar.style.display = 'flex';
+                this.restoreSidebar();
+                this.restoreLogFromStorage();
+                this.updateSidebarDisplay();
+            } else {
+                this.showConfigSidebar(); // Fallback creation
+            }
+        }
+
+        hideSidebar() {
+            if (this.sidebar) this.sidebar.style.display = 'none';
+        }
+
+        minimizeSidebar() {
+            if (this.sidebar) {
+                this.sidebar.style.transform = 'translateX(calc(100% - 40px))';
+                const btn = document.getElementById('sidebar-rename-minimize');
+                if (btn) {
+                    btn.textContent = '+';
+                    btn.onclick = () => this.restoreSidebar();
+                }
+            }
+        }
+
+        restoreSidebar() {
+            if (this.sidebar) {
+                this.sidebar.style.transform = 'translateX(0)';
+                const btn = document.getElementById('sidebar-rename-minimize');
+                if (btn) {
+                    btn.textContent = '';
+                    btn.onclick = () => this.minimizeSidebar();
+                }
+            }
         }
 
         restoreSidebarFromStorage() {
@@ -214,12 +439,7 @@
                             this.saveReturnUrl(data.returnUrl);
                         }
 
-                        if (this.sidebar) {
-                            this.sidebar.remove();
-                            this.sidebar = null;
-                        }
-
-                        this.createSidebar();
+                        this.createProgressSidebar();
                         this.showSidebar();
                         this.updateSidebarDisplay();
                         this.restoreLogFromStorage();
@@ -238,6 +458,17 @@
             }
         }
 
+        // ==================== ЛОГИКА ПЕРЕИМЕНОВАНИЯ ====================
+
+        getValidRows() {
+            return (this.renameRows || [])
+                .map(row => ({
+                    currentName: String(row.currentName || '').trim(),
+                    newName: String(row.newName || '').trim()
+                }))
+                .filter(row => row.currentName && row.newName);
+        }
+
         checkForContinueRename() {
             const savedData = localStorage.getItem(this.dataKey);
             if (savedData && !this.renameStarted && !this.isStopRequested()) {
@@ -254,7 +485,7 @@
                         }
 
                         if (!this.sidebar) {
-                            this.createSidebar();
+                            this.createProgressSidebar();
                             this.showSidebar();
                             this.updateSidebarDisplay();
                             this.restoreLogFromStorage();
@@ -346,188 +577,6 @@
 
         handleStopSignal() {
             this.stopRenameProcess('⏹️ Переименование остановлено из другой вкладки', 'warning');
-        }
-
-        showConfigSidebar() {
-            const savedData = localStorage.getItem(this.dataKey);
-            if (this.isRenaming || savedData) {
-                if (savedData) {
-                    try {
-                        const data = JSON.parse(savedData);
-                        if (data.rows && data.rows.length > 0) {
-                            this.renameRows = data.rows;
-                            this.currentIndex = data.currentIndex || 0;
-                            this.isRenaming = this.currentIndex < this.renameRows.length;
-                        }
-                    } catch (error) {
-                        console.warn('[TariffRenamer] showConfigSidebar read data error', error);
-                    }
-                }
-
-                if (this.isRenaming) {
-                    if (this.sidebar && this.sidebar.id === 'tariff-rename-sidebar') {
-                        this.showSidebar();
-                    } else {
-                        this.createSidebar();
-                        this.showSidebar();
-                        this.updateSidebarDisplay();
-                        this.restoreLogFromStorage();
-                    }
-                    return;
-                }
-            }
-
-            if (!this.sidebar || this.sidebar.id !== 'tariff-rename-sidebar') {
-                this.createSidebar();
-            }
-            this.showSidebar();
-        }
-
-        createSidebar() {
-            
-            if (this.sidebar && this.sidebar.id === 'tariff-rename-sidebar') return;
-            if (this.sidebar) {
-                this.sidebar.remove();
-            }
-
-            this.sidebar = document.createElement('div');
-            this.sidebar.id = 'tariff-rename-sidebar';
-            this.sidebar.style.cssText = `
-                position: fixed;
-                top: 0;
-                right: 0;
-                width: 450px;
-                height: 100vh;
-                background: #1e293b;
-                box-shadow: -2px 0 20px rgba(0,0,0,0.3);
-                z-index: 1000002;
-                display: flex;
-                flex-direction: column;
-                font-family: 'Segoe UI', Arial, sans-serif;
-                border-left: 1px solid #334155;
-            `;
-
-            this.sidebar.innerHTML = `
-                <div style="padding: 16px 20px; background: #0f172a; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <h3 style="color: #c084fc; margin: 0; font-size: 18px;">✏️ Переименование тарифов</h3>
-                        <div style="color: #94a3b8; font-size: 11px; margin-top: 4px;">Массовое переименование тарифов из Excel</div>
-                    </div>
-                    <div style="display:flex; gap:8px;">
-                        <button id="sidebar-rename-minimize" style="background: none; border: none; color: #94a3b8; font-size: 18px; cursor: pointer; padding: 4px 8px;">−</button>
-                        <button id="sidebar-rename-close" style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; padding: 4px 8px;">×</button>
-                    </div>
-                </div>
-
-                <div id="sidebar-rename-status" style="background: #0f172a; margin: 16px; padding: 12px; border-radius: 8px; border-left: 3px solid #c084fc;">
-                    <div style="color: #c084fc; font-size: 13px; font-weight: 500;" id="sidebar-rename-status-title">📋 Выберите файл</div>
-                    <div style="color: #94a3b8; font-size: 11px; margin-top: 6px;" id="sidebar-rename-status-detail">Скачайте шаблон, заполните новый столбец и загрузите файл</div>
-                </div>
-
-                <div style="padding: 0 16px 16px 16px; display:flex; flex-direction:column; gap:10px;">
-                    <button id="sidebar-rename-download" style="width:100%; padding:10px; background:linear-gradient(135deg,#60a5fa,#3b82f6); color:white; border:none; border-radius:6px; cursor:pointer;">📥 Скачать шаблон</button>
-                    <input type="file" id="sidebar-rename-file" accept=".xls,.xlsx,.xlsm" style="background:#334155; color:white; border:none; padding:8px; border-radius:6px; width:100%; cursor:pointer;">
-                </div>
-
-                <div id="sidebar-rename-progress" style="margin: 0 16px 16px 16px;">
-                    <div style="height: 8px; background: #334155; border-radius: 4px; overflow: hidden;">
-                        <div id="sidebar-rename-progress-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #c084fc, #8b5cf6);"></div>
-                    </div>
-                    <div id="sidebar-rename-progress-text" style="text-align: center; font-size: 12px; color: #94a3b8; margin-top:4px;">0%</div>
-                </div>
-
-                <div id="sidebar-rename-log" style="flex: 1 1 auto; min-height: 0; background: #0f172a; margin: 0 16px 16px 16px; padding: 12px; border-radius: 8px; overflow-y: auto; overflow-x: hidden; font-size: 11px; line-height: 1.4; font-family: monospace; white-space: pre-wrap; word-break: break-word;"></div>
-
-                <div style="padding: 16px; border-top: 1px solid #334155;">
-                    <div style="display:flex; gap:8px;">
-                        <button id="sidebar-rename-start-btn" style="flex:1; padding: 10px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; border: none; border-radius: 6px; cursor: pointer;">🚀 Начать</button>
-                        <button id="sidebar-rename-stop-btn" style="flex:1; padding: 10px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; display:none;">⏹️ Остановить</button>
-                    </div>
-                </div>
-            `;
-
-            document.body.appendChild(this.sidebar);
-
-            document.getElementById('sidebar-rename-close').onclick = () => this.hideSidebar();
-            document.getElementById('sidebar-rename-minimize').onclick = () => this.minimizeSidebar();
-            document.getElementById('sidebar-rename-download').onclick = () => this.downloadTemplate();
-            document.getElementById('sidebar-rename-file').onchange = (e) => this.loadExcelFile(e.target.files[0]);
-            document.getElementById('sidebar-rename-start-btn').onclick = () => this.startRename();
-            document.getElementById('sidebar-rename-stop-btn').onclick = () => this.stopRename();
-        }
-
-        showSidebar() {
-            if (this.sidebar) {
-                this.sidebar.style.display = 'flex';
-                this.restoreSidebar();
-                this.restoreLogFromStorage();
-                this.updateSidebarDisplay();
-            } else {
-                this.createSidebar();
-            }
-        }
-
-        hideSidebar() {
-            if (this.sidebar) this.sidebar.style.display = 'none';
-        }
-
-        minimizeSidebar() {
-            if (this.sidebar) {
-                this.sidebar.style.transform = 'translateX(calc(100% - 40px))';
-                const btn = document.getElementById('sidebar-rename-minimize');
-                if (btn) {
-                    btn.textContent = '+';
-                    btn.onclick = () => this.restoreSidebar();
-                }
-            }
-        }
-
-        restoreSidebar() {
-            if (this.sidebar) {
-                this.sidebar.style.transform = 'translateX(0)';
-                const btn = document.getElementById('sidebar-rename-minimize');
-                if (btn) {
-                    btn.textContent = '−';
-                    btn.onclick = () => this.minimizeSidebar();
-                }
-            }
-        }
-
-        updateSidebarDisplay() {
-            if (!this.sidebar) return;
-
-            const title = document.getElementById('sidebar-rename-status-title');
-            const detail = document.getElementById('sidebar-rename-status-detail');
-            const fill = document.getElementById('sidebar-rename-progress-fill');
-            const text = document.getElementById('sidebar-rename-progress-text');
-            const startBtn = document.getElementById('sidebar-rename-start-btn');
-            const stopBtn = document.getElementById('sidebar-rename-stop-btn');
-
-            const total = this.getValidRows().length;
-            const current = Math.min(this.currentIndex, total);
-            const progress = total > 0 ? Math.round((current / total) * 100) : 0;
-
-            if (fill) fill.style.width = `${progress}%`;
-            if (text) text.textContent = total > 0 ? `${progress}% (${current}/${total})` : '0%';
-
-            if (this.isRenaming) {
-                if (title) title.textContent = '🔄 Переименование';
-                if (detail) detail.textContent = `Обрабатывается тариф ${Math.min(this.currentIndex + 1, total)} из ${total}`;
-                if (startBtn) startBtn.style.display = 'none';
-                if (stopBtn) stopBtn.style.display = 'block';
-            } else {
-                if (title) title.textContent = total > 0 ? '✅ Данные загружены' : '📋 Выберите файл';
-                if (detail) detail.textContent = total > 0
-                    ? `Готово к запуску: ${total} записей`
-                    : 'Скачайте шаблон, заполните новый столбец и загрузите файл';
-                if (startBtn) {
-                    startBtn.style.display = 'block';
-                    startBtn.disabled = total === 0;
-                    startBtn.style.opacity = total === 0 ? '0.5' : '1';
-                    startBtn.style.cursor = total === 0 ? 'not-allowed' : 'pointer';
-                }
-                if (stopBtn) stopBtn.style.display = 'none';
-            }
         }
 
         async loadExcelFile(file) {
@@ -683,6 +732,10 @@
             this.renameStarted = false;
             this.shouldStop = false;
             this.saveStateToStorage();
+            
+            // Переключаем интерфейс на экран прогресса
+            this.createProgressSidebar();
+            this.showSidebar();
             this.updateSidebarDisplay();
 
             const firstRow = this.renameRows[0];
@@ -692,7 +745,7 @@
             }
 
             this.openTariffForRename(firstRow.currentName);
-            this.addSidebarLog(`✅ Ищем тариф для переименования: ${firstRow.currentName}`, 'success');
+            this.addSidebarLog(`🔍 Ищем тариф: ${firstRow.currentName}`, 'info');
             if (this.debug) {
                 this.addSidebarLog('💡 Ожидание открытия формы редактирования...', 'info');
             }
@@ -799,7 +852,7 @@
             this.isRenaming = true;
             this.shouldStop = false;
 
-            this.createSidebar();
+            this.createProgressSidebar();
             this.showSidebar();
 
             const remaining = this.renameRows.length - this.currentIndex;
@@ -808,7 +861,7 @@
             }
 
             const row = this.renameRows[this.currentIndex];
-            this.addSidebarLog(`📝 Переименование: ${row.currentName} → ${row.newName} (${this.currentIndex + 1}/${this.renameRows.length})`, 'info');
+            this.addSidebarLog(`📝 Меняем имя: ${row.currentName} → ${row.newName}`, 'info');
 
             this.updateSidebarDisplay();
             this.saveStateToStorage();
@@ -821,7 +874,7 @@
             }
 
             if (success) {
-                this.addSidebarLog(`✅ Переименован: ${row.currentName} → ${row.newName}`, 'success');
+                this.addSidebarLog(`✅ Успешно: ${row.newName}`, 'success');
                 this.currentIndex++;
                 this.saveStateToStorage();
 
@@ -862,7 +915,7 @@
                     this.finishRename();
                 }
             } else {
-                this.addSidebarLog(`❌ Ошибка: ${row.currentName}`, 'error');
+                this.addSidebarLog(`❌ Ошибка сохранения: ${row.currentName}`, 'error');
                 this.finishRename();
             }
         }
@@ -934,7 +987,7 @@
             this.isRenaming = false;
             this.shouldStop = false;
             this.renameStarted = false;
-            this.addSidebarLog('✨ Переименование завершено!', 'success');
+            this.addSidebarLog('✨ Переименование всех тарифов завершено!', 'success');
 
             localStorage.removeItem(this.dataKey);
             localStorage.removeItem(this.stateKey);

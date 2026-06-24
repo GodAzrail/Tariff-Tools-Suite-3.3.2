@@ -164,7 +164,7 @@
             if (this.logEntries.length === 0) {
                 const emptyMsg = document.createElement('div');
                 emptyMsg.style.color = '#60a5fa';
-                emptyMsg.textContent = '💡 Готов к работе';
+                emptyMsg.textContent = '💡 Готов к экспорту';
                 logDiv.appendChild(emptyMsg);
                 return;
             }
@@ -178,10 +178,8 @@
             
             for (const entry of this.logEntries) {
                 const entryDiv = document.createElement('div');
-                entryDiv.style.color = colors[entry.type] || '#94a3b8';
-                entryDiv.style.marginBottom = '6px';
-                entryDiv.style.padding = '4px 0';
-                entryDiv.style.borderBottom = '1px solid #334155';
+                entryDiv.style.color = colors[entry.type] || '#cbd5e1';
+                entryDiv.style.marginBottom = '4px';
                 entryDiv.style.fontSize = '11px';
                 entryDiv.textContent = `[${entry.time}] ${entry.message}`;
                 logDiv.appendChild(entryDiv);
@@ -312,7 +310,6 @@
                 return btn;
             };
 
-            // ИЗМЕНЕНО: Вызываем showPvzSidebar вместо input.click()
             this.pvzCreateButton = createProButton('tariff-pvz-create-pro-nav-btn', 'Массовое ПВЗ', 'btn-pro-pvz', () => this.showPvzSidebar());
             this.importButton = createProButton('tariff-create-pro-nav-btn', 'Массовое Доставка', 'btn-pro-create', () => this.showImportSidebar());
             this.renameButton = createProButton('tariff-rename-pro-nav-btn', 'Переименовать', 'btn-pro-rename', () => this.showRenameSidebar());
@@ -350,7 +347,6 @@
                         return btn;
                     };
 
-                    // ИЗМЕНЕНО: Вызываем showPvzSidebar вместо input.click()
                     this.pvzCreateButton = createProButton('tariff-pvz-create-pro-nav-btn', 'Массовое ПВЗ', 'btn-pro-pvz', () => this.showPvzSidebar());
                     this.importButton = createProButton('tariff-create-pro-nav-btn', 'Массовое Доставка', 'btn-pro-create', () => this.showImportSidebar());
                     this.renameButton = createProButton('tariff-rename-pro-nav-btn', 'Переименование', 'btn-pro-rename', () => this.showRenameSidebar());
@@ -396,7 +392,6 @@
             if (existingPvzBtn) existingPvzBtn.remove();
         }
 
-        // ДОБАВЛЕНО: Новый метод для запуска ПВЗ-сайдбара
         showPvzSidebar() {
             const tryShowSidebar = () => {
                 if (typeof window.openPVZTariffCreator === 'function') {
@@ -455,7 +450,7 @@
                 return;
             }
             
-            this.addSidebarLog('⏳ Ожидание инициализации модуля массового создания...', 'info');
+            this.addSidebarLog('⏳ Ожидание инициализации модуля создания...', 'info');
             
             let attempts = 0;
             const maxAttempts = 20;
@@ -470,7 +465,7 @@
                 if (attempts >= maxAttempts) {
                     clearInterval(waitInterval);
                     console.error('[TariffExportPro] tariffCreatorPro не инициализирован');
-                    this.addSidebarLog('❌ Ошибка: модуль массового создания не инициализировался', 'error');
+                    this.addSidebarLog('❌ Ошибка: модуль создания не инициализировался', 'error');
                 }
             }, 250);
         }
@@ -546,30 +541,23 @@
             this.sidebar = document.createElement('div');
             this.sidebar.id = 'tariff-export-sidebar';
             this.sidebar.style.cssText = `
-                position: fixed;
-                top: 0;
-                right: 0;
-                width: 450px;
-                height: 100vh;
-                background: #1e293b;
-                box-shadow: -2px 0 20px rgba(0,0,0,0.3);
-                z-index: 1000001;
-                display: flex;
-                flex-direction: column;
-                font-family: 'Segoe UI', Arial, sans-serif;
-                border-left: 1px solid #334155;
+                position: fixed; top: 0; right: 0; width: 420px; height: 100vh;
+                background: #1e293b; box-shadow: -2px 0 20px rgba(0,0,0,0.3); z-index: 1000001;
+                display: flex; flex-direction: column; font-family: 'Segoe UI', Arial, sans-serif;
+                border-left: 1px solid #334155; transition: transform 0.3s ease;
             `;
             this.sidebar.innerHTML = `
                 <div style="padding: 16px 20px; background: #0f172a; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
                     <div>
                         <h3 style="color: #60a5fa; margin: 0; font-size: 18px;">📤 Экспорт тарифов</h3>
-                        <div style="color: #94a3b8; font-size: 11px; margin-top: 4px;">Сбор тарифов доставки и сохранение в Excel</div>
+                        <div style="color: #94a3b8; font-size: 11px; margin-top: 4px;">Сбор тарифов и сохранение в Excel</div>
                     </div>
                     <div style="display: flex; gap: 8px;">
-                        <button id="sidebar-export-minimize" style="background: none; border: none; color: #94a3b8; font-size: 18px; cursor: pointer; padding: 4px 8px;">−</button>
-                        <button id="sidebar-export-close" style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; padding: 4px 8px;">×</button>
+                        <button id="sidebar-export-minimize" style="background: none; border: none; color: #94a3b8; font-size: 22px; cursor: pointer; padding: 0; line-height: 1;"></button>
+                        <button id="sidebar-export-close" style="background: none; border: none; color: #94a3b8; font-size: 22px; cursor: pointer; padding: 0; line-height: 1;">×</button>
                     </div>
                 </div>
+                <div id="tariff-export-content" style="padding: 16px; flex: 1; display: flex; flex-direction: column; min-height: 0;"></div>
             `;
             document.body.appendChild(this.sidebar);
             document.getElementById('sidebar-export-close').onclick = () => this.hideSidebar();
@@ -578,53 +566,60 @@
 
         createSidebar() {
             this.createBaseSidebar();
-
-            const content = document.createElement('div');
-            content.style.cssText = 'display:flex; flex-direction:column; flex:1 1 auto; min-height:0; overflow:hidden;';
+            const content = this.sidebar.querySelector('#tariff-export-content');
+            
             content.innerHTML = `
-                <div id="sidebar-status" style="background: #0f172a; margin: 16px; padding: 12px; border-radius: 8px; border-left: 3px solid #60a5fa;">
+                <div id="sidebar-status-box" style="margin-bottom: 16px; background: #0f172a; padding: 12px; border-radius: 8px; border-left: 3px solid #60a5fa;">
                     <div style="color: #60a5fa; font-size: 13px; font-weight: 500;" id="sidebar-status-title">🔄 Ожидание</div>
                     <div style="color: #94a3b8; font-size: 11px; margin-top: 6px;" id="sidebar-status-detail">Нажмите «Старт экспорта» для начала сбора тарифов</div>
                 </div>
 
-                <div id="sidebar-progress" style="margin: 0 16px 16px 16px;">
+                <div style="margin-bottom: 16px; display: flex; gap: 8px; justify-content: space-between;">
+                    <div style="flex: 1; background: #0f172a; border-radius: 8px; border: 1px solid #334155; padding: 10px; text-align: center;">
+                        <div style="font-size: 18px; font-weight: bold; color: #60a5fa;" id="sidebar-tariff-uuid">0</div>
+                        <div style="font-size: 10px; color: #94a3b8; margin-top: 2px;">UUID собрано</div>
+                    </div>
+                    <div style="flex: 1; background: #0f172a; border-radius: 8px; border: 1px solid #334155; padding: 10px; text-align: center;">
+                        <div style="font-size: 18px; font-weight: bold; color: #60a5fa;" id="sidebar-tariff-total">0</div>
+                        <div style="font-size: 10px; color: #94a3b8; margin-top: 2px;">Всего тарифов</div>
+                    </div>
+                    <div style="flex: 1; background: #0f172a; border-radius: 8px; border: 1px solid #334155; padding: 10px; text-align: center;">
+                        <div style="font-size: 18px; font-weight: bold; color: #10b981;" id="sidebar-tariff-collected">0</div>
+                        <div style="font-size: 10px; color: #94a3b8; margin-top: 2px;">Данных собрано</div>
+                    </div>
+                </div>
+
+                <div id="sidebar-progress" style="margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px; color: #94a3b8; font-size: 13px;">
+                        <span id="sidebar-time-estimate">Прогресс</span>
+                        <span id="sidebar-progress-text">0%</span>
+                    </div>
                     <div style="height: 8px; background: #334155; border-radius: 4px; overflow: hidden;">
-                        <div id="sidebar-progress-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #60a5fa, #3b82f6);"></div>
-                    </div>
-                    <div id="sidebar-progress-text" style="text-align: center; font-size: 12px; color: #94a3b8; margin-top:4px;">0%</div>
-                    <div id="sidebar-time-estimate" style="text-align: center; font-size: 11px; color: #60a5fa; margin-top: 6px;"></div>
-                </div>
-
-                <div style="margin: 0 16px 16px 16px;">
-                    <div style="display: flex; gap: 8px; justify-content: space-between;">
-                        <div style="flex: 1; background: #0f172a; border-radius: 6px; padding: 8px; text-align: center;">
-                            <div style="font-size: 20px; font-weight: bold; color: #60a5fa;" id="sidebar-tariff-uuid">0</div>
-                            <div style="font-size: 10px; color: #94a3b8;">UUID собрано</div>
-                        </div>
-                        <div style="flex: 1; background: #0f172a; border-radius: 6px; padding: 8px; text-align: center;">
-                            <div style="font-size: 20px; font-weight: bold; color: #60a5fa;" id="sidebar-tariff-total">0</div>
-                            <div style="font-size: 10px; color: #94a3b8;">Всего тарифов</div>
-                        </div>
-                        <div style="flex: 1; background: #0f172a; border-radius: 6px; padding: 8px; text-align: center;">
-                            <div style="font-size: 20px; font-weight: bold; color: #10b981;" id="sidebar-tariff-collected">0</div>
-                            <div style="font-size: 10px; color: #94a3b8;">Данных собрано</div>
-                        </div>
+                        <div id="sidebar-progress-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #3b82f6, #60a5fa);"></div>
                     </div>
                 </div>
 
-                <div id="sidebar-log" style="flex: 1 1 auto; min-height: 0; background: #0f172a; margin: 0 16px 16px 16px; padding: 12px; border-radius: 8px; overflow-y: auto; overflow-x: hidden; font-size: 11px; line-height: 1.4; font-family: monospace; white-space: pre-wrap; word-break: break-word;"></div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px; align-items: center;">
+                    <div style="color: #94a3b8; font-size: 12px;">Логи:</div>
+                    <button id="sidebar-export-clear-log" style="background: none; border: none; color: #ef4444; font-size: 11px; cursor: pointer; padding: 0;">🗑️ Очистить</button>
+                </div>
+                <div id="sidebar-log" style="flex: 1; background: #0f172a; border-radius: 8px; padding: 12px; overflow-y: auto; font-size: 11px; font-family: monospace; margin-bottom: 16px; border: 1px solid #334155;"></div>
 
-                <div style="padding: 16px; border-top: 1px solid #334155; display:flex; gap:8px;">
-                    <button id="sidebar-start" style="flex:1; padding: 10px; background: linear-gradient(135deg, #60a5fa, #3b82f6); color:white; border:none; border-radius:6px; cursor:pointer;">🚀 Старт экспорта</button>
-                    <button id="sidebar-stop" style="flex:1; padding: 10px; background: #dc2626; color:white; border:none; border-radius:6px; cursor:pointer; display:none;">⏹️ Остановить</button>
-                    <button id="sidebar-save" style="flex:1; padding: 10px; background: #10b981; color:white; border:none; border-radius:6px; cursor:pointer; display:none;">💾 Сохранить Excel</button>
+                <div style="display: flex; gap: 8px;">
+                    <button id="sidebar-start" style="flex: 1; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s;">🚀 Начать экспорт</button>
+                    <button id="sidebar-stop" style="flex: 1; padding: 12px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; display: none;">⏹️ Остановить</button>
+                    <button id="sidebar-save" style="flex: 1; padding: 12px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; display: none;">💾 Сохранить Excel</button>
                 </div>
             `;
-            this.sidebar.appendChild(content);
 
             document.getElementById('sidebar-start').onclick = () => this.startExport();
             document.getElementById('sidebar-stop').onclick = () => this.stopExport();
             document.getElementById('sidebar-save').onclick = () => this.saveExcelFile();
+            document.getElementById('sidebar-export-clear-log').onclick = () => {
+                this.logEntries = [];
+                this.saveLogToStorage();
+                this.renderLog();
+            };
 
             this.updateSidebarDisplay();
             this.restoreLogFromStorage();
@@ -653,12 +648,24 @@
         }
         
         minimizeSidebar() {
-            this.hideSidebar();
+            if (this.sidebar) {
+                this.sidebar.style.transform = 'translateX(calc(100% - 40px))';
+                const btn = document.getElementById('sidebar-export-minimize');
+                if (btn) {
+                    btn.textContent = '+';
+                    btn.onclick = () => this.restoreSidebar();
+                }
+            }
         }
         
         restoreSidebar() {
             if (this.sidebar) {
-                this.sidebar.style.display = 'flex';
+                this.sidebar.style.transform = 'translateX(0)';
+                const btn = document.getElementById('sidebar-export-minimize');
+                if (btn) {
+                    btn.textContent = '−';
+                    btn.onclick = () => this.minimizeSidebar();
+                }
             }
         }
         
@@ -738,15 +745,15 @@
                 const minutes = Math.floor(remainingSeconds / 60);
                 const seconds = remainingSeconds % 60;
                 const timeText = minutes > 0 ? `${minutes} мин ${seconds} сек` : `${seconds} сек`;
-                timeEstimateDiv.innerHTML = `⏱️ Осталось примерно: ${timeText}`;
+                timeEstimateDiv.innerHTML = `⏱️ Осталось: ${timeText}`;
             } else if (timeEstimateDiv) {
-                timeEstimateDiv.innerHTML = '⏱️ Завершается...';
+                timeEstimateDiv.innerHTML = 'Прогресс';
             }
         }
         
         addSidebarLog(message, type = 'info') {
             const entry = {
-                time: new Date().toLocaleTimeString(),
+                time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
                 message: message,
                 type: type
             };
@@ -1471,7 +1478,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 
-    // ДОБАВЛЕНО: Обработка сообщения для вызова ПВЗ из popup
     if (request.action === 'showPvzSidebar') {
         if (window.tariffExportPro) {
             window.tariffExportPro.showPvzSidebar();
@@ -1507,7 +1513,6 @@ window.addEventListener('message', (event) => {
         }
     }
 
-    // ДОБАВЛЕНО: Обработка сообщения для вызова ПВЗ из сторонних скриптов/страницы
     if (event.data && event.data.action === 'showPvzSidebar') {
         if (window.tariffExportPro) {
             window.tariffExportPro.showPvzSidebar();

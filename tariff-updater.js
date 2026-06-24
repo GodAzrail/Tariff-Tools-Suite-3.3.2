@@ -183,9 +183,9 @@
                 branches: true,
                 mgx: true,
                 intervals: true,
-                deliveryParams: true, // Новое
-                costLimit: true,      // Новое
-                validityDates: true,  // Новое
+                deliveryParams: true,
+                costLimit: true,      
+                validityDates: true,  
                 payment: true,
                 acceptance: true,
                 saleTypes: true,
@@ -212,15 +212,15 @@
         getImportBlockDefinitions() {
             return [
                 { key: 'zones', label: 'Зоны доставки' },
-                { key: 'branches', label: 'Филиалы обслуживания' },
+                { key: 'branches', label: 'Филиалы' },
                 { key: 'mgx', label: 'МГХ сетка' },
-                { key: 'intervals', label: 'Интервалы доставки' },
-                { key: 'deliveryParams', label: 'Параметры доставки (дни, отсечка)' },
-                { key: 'costLimit', label: 'Лимит стоимости заказа' },
-                { key: 'validityDates', label: 'Даты действия тарифа' },
-                { key: 'payment', label: 'Способ оплаты при получении' },
+                { key: 'intervals', label: 'Интервалы' },
+                { key: 'deliveryParams', label: 'Дни, отсечка' },
+                { key: 'costLimit', label: 'Лимит суммы' },
+                { key: 'validityDates', label: 'Даты действия' },
+                { key: 'payment', label: 'Оплата' },
                 { key: 'acceptance', label: 'Прием заявок' },
-                { key: 'saleTypes', label: 'Допустимый к оформлению вид продажи' },
+                { key: 'saleTypes', label: 'Вид продажи' },
                 { key: 'floor', label: 'Подъем на этаж' }
             ];
         }
@@ -259,9 +259,9 @@
 
         renderImportBlockCheckboxes() {
             return this.getImportBlockDefinitions().map(block => `
-                <label style="display: flex; align-items: center; gap: 8px; color: #e2e8f0; font-size: 12px; cursor: pointer; padding: 6px 8px; background: #1e293b; border-radius: 6px;">
-                    <input type="checkbox" id="${this.getImportBlockCheckboxId(block.key)}" style="cursor: pointer;" ${this.isImportBlockEnabled(block.key) ? 'checked' : ''}>
-                    <span>${block.label}</span>
+                <label style="display: flex; align-items: center; gap: 6px; color: #e2e8f0; font-size: 11px; cursor: pointer; padding: 4px 8px; background: #1e293b; border-radius: 4px; border: 1px solid #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: all 0.2s;" onmouseover="this.style.borderColor='#10b981'" onmouseout="this.style.borderColor='#334155'" title="${block.label}">
+                    <input type="checkbox" id="${this.getImportBlockCheckboxId(block.key)}" style="cursor: pointer; margin: 0; min-width: 13px;" ${this.isImportBlockEnabled(block.key) ? 'checked' : ''}>
+                    <span style="overflow: hidden; text-overflow: ellipsis;">${block.label}</span>
                 </label>
             `).join('');
         }
@@ -294,7 +294,7 @@
         setCreateFailure(step, details = {}) {
             const payload = { step, details, url: window.location.href, timestamp: new Date().toISOString() };
             this.lastCreateFailure = payload;
-            this.addSidebarLog(`❌ createTariff: ${step}`, 'error');
+            this.addSidebarLog(`❌ Ошибка: ${step}`, 'error');
             return false;
         }
 
@@ -385,13 +385,15 @@
             }
         }
         
+        // ==================== ИНТЕРФЕЙС И ОТОБРАЖЕНИЕ ====================
+
         renderLog() {
             const logDiv = document.getElementById('sidebar-update-log');
             if (!logDiv) return;
             logDiv.innerHTML = '';
             if (this.logEntries.length === 0) {
                 const emptyMsg = document.createElement('div');
-                emptyMsg.style.color = '#60a5fa';
+                emptyMsg.style.color = '#10b981';
                 emptyMsg.textContent = '💡 Готов к импорту';
                 logDiv.appendChild(emptyMsg);
                 return;
@@ -399,13 +401,31 @@
             const colors = { success: '#4ade80', error: '#f87171', info: '#60a5fa', warning: '#fbbf24' };
             for (const entry of this.logEntries) {
                 const entryDiv = document.createElement('div');
-                entryDiv.style.color = colors[entry.type] || '#94a3b8';
-                entryDiv.style.marginBottom = '6px';
-                entryDiv.style.padding = '4px 0';
-                entryDiv.style.borderBottom = '1px solid #334155';
+                entryDiv.style.color = colors[entry.type] || '#cbd5e1';
+                entryDiv.style.marginBottom = '4px';
                 entryDiv.style.fontSize = '11px';
-                entryDiv.innerHTML = `[${entry.time}] ${entry.message}`;
+                entryDiv.textContent = `[${entry.time}] ${entry.message}`;
                 logDiv.appendChild(entryDiv);
+            }
+            requestAnimationFrame(() => { logDiv.scrollTop = logDiv.scrollHeight; });
+        }
+
+        renderConfigLog() {
+            const logDiv = document.getElementById('sidebar-update-config-log');
+            if (!logDiv) return;
+            logDiv.innerHTML = '';
+            if (this.logEntries.length === 0) {
+                logDiv.innerHTML = '<div style="color: #10b981;">💡 Готов к импорту</div>';
+                return;
+            }
+            const colors = { success: '#4ade80', error: '#f87171', info: '#60a5fa', warning: '#fbbf24' };
+            for (const entry of this.logEntries) {
+                const div = document.createElement('div');
+                div.style.color = colors[entry.type] || '#cbd5e1';
+                div.style.marginBottom = '4px';
+                div.style.fontSize = '11px';
+                div.textContent = `[${entry.time}] ${entry.message}`;
+                logDiv.appendChild(div);
             }
             requestAnimationFrame(() => { logDiv.scrollTop = logDiv.scrollHeight; });
         }
@@ -520,7 +540,7 @@
                 this.restoreLogFromStorage();
                 this.updateButtonsForImportState();
                 if (manuallyStopped && hasSavedTariffs) {
-                    this.updateConfigStatus('⏹️ Импорт остановлен', 'Можно запустить заново с тем же файлом');
+                    this.updateConfigStatus('⏹️ Обновление остановлено', 'Можно запустить заново с тем же файлом');
                 }
                 return;
             }
@@ -528,7 +548,7 @@
             this.createConfigSidebar();
             this.hideOtherSidebars();
         }
-        
+
         createConfigSidebar() {
             this.removeLegacyImportButton();
             if (this.sidebar) {
@@ -539,56 +559,59 @@
             this.sidebar = document.createElement('div');
             this.sidebar.id = 'tariff-update-config-sidebar';
             this.sidebar.style.cssText = `
-                position: fixed; top: 0; right: 0; width: 450px; height: 100vh;
+                position: fixed; top: 0; right: 0; width: 420px; height: 100vh;
                 background: #1e293b; box-shadow: -2px 0 20px rgba(0,0,0,0.3); z-index: 1000001;
                 display: flex; flex-direction: column; font-family: 'Segoe UI', Arial, sans-serif;
-                border-left: 1px solid #334155;
+                border-left: 1px solid #334155; transition: transform 0.3s ease;
             `;
 
             this.sidebar.innerHTML = `
                 <div style="padding: 16px 20px; background: #0f172a; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <h3 style="color: #10b981; margin: 0; font-size: 18px;">📥 Импорт тарифов</h3>
+                        <h3 style="color: #10b981; margin: 0; font-size: 18px;">📥 Обновление</h3>
                         <div style="color: #94a3b8; font-size: 11px; margin-top: 4px;">Обновление существующих тарифов из Excel</div>
                     </div>
                     <div style="display: flex; gap: 8px;">
-                        <button id="sidebar-update-config-minimize" style="background: none; border: none; color: #94a3b8; font-size: 18px; cursor: pointer; padding: 4px 8px;">−</button>
-                        <button id="sidebar-update-config-close" style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; padding: 4px 8px;">×</button>
+                        <button id="sidebar-update-config-minimize" style="background: none; border: none; color: #94a3b8; font-size: 22px; cursor: pointer; padding: 0; line-height: 1;"></button>
+                        <button id="sidebar-update-config-close" style="background: none; border: none; color: #94a3b8; font-size: 22px; cursor: pointer; padding: 0; line-height: 1;">×</button>
                     </div>
                 </div>
 
-                <div style="padding: 16px; background: #0f172a; margin: 16px; border-radius: 8px; display: flex; flex-direction: column; gap: 14px;">
-                    <div>
-                        <label style="color: #94a3b8; font-size: 12px; display: block; margin-bottom: 6px;">📁 Excel файл</label>
-                        <input type="file" id="excel-file-input-config" accept=".xls,.xlsx,.xlsm" style="background: #334155; color: white; border: none; padding: 8px; border-radius: 6px; width: 100%; cursor: pointer;">
+                <div style="padding: 16px; flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                    
+                    <div id="sidebar-update-config-status" style="margin-bottom: 12px; background: #0f172a; padding: 12px; border-radius: 8px; border-left: 3px solid #10b981;">
+                        <div style="color: #10b981; font-size: 13px; font-weight: 500;" id="sidebar-update-config-status-title">📋 Загрузите данные</div>
+                        <div style="color: #94a3b8; font-size: 11px; margin-top: 6px;" id="sidebar-update-config-status-detail">Выберите файл и нужные блоки</div>
                     </div>
-                    <div>
-                        <div style="color: #94a3b8; font-size: 12px; margin-bottom: 8px;">🧩 Какие блоки импортировать</div>
-                        <div id="sidebar-update-import-blocks" style="display: grid; grid-template-columns: 1fr; gap: 8px;">
+
+                    <div style="margin-bottom: 12px; position: relative; background: #334155; border: 2px dashed #64748b; border-radius: 8px; padding: 14px 16px; text-align: center; transition: all 0.2s ease;">
+                         <input type="file" id="excel-file-input-config" accept=".xls,.xlsx,.xlsm" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10;" 
+                         onmouseover="this.parentElement.style.borderColor='#10b981'; this.parentElement.style.background='#475569';" 
+                        onmouseout="this.parentElement.style.borderColor='#64748b'; this.parentElement.style.background='#334155';">
+                      <div style="font-size: 22px; margin-bottom: 4px; pointer-events: none; opacity: 0.9;">📄</div>
+                      <div style="color: #f8fafc; font-size: 13px; font-weight: 500; margin-bottom: 4px; pointer-events: none;">1. Выберите файл Excel</div>
+                      <div id="sidebar-update-file-status" style="font-size: 11px; color: #cbd5e1; pointer-events: none;">Нажмите и выберите файл (.xls, .xlsx)</div>
+                    </div>
+
+                    <div style="margin-bottom: 12px; background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <div style="color: #cbd5e1; font-size: 12px;">🧩 Блоки для обновления:</div>
+                            <button id="sidebar-update-config-import-all" style="background: none; border: none; color: #10b981; font-size: 11px; cursor: pointer; padding: 0;">Выбрать все</button>
+                        </div>
+                        <div id="sidebar-update-import-blocks" style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
                             ${this.renderImportBlockCheckboxes()}
                         </div>
                     </div>
-                    <button id="sidebar-update-config-import-all" style="padding: 10px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer;">📦 Импортировать все</button>
-                </div>
 
-                <div id="sidebar-update-config-status" style="background: #0f172a; margin: 0 16px 16ms 16ms; padding: 12px; border-radius: 8px; border-left: 3px solid #10b981;">
-                    <div style="color: #10b981; font-size: 13px; font-weight: 500;" id="sidebar-update-config-status-title">📋 Выберите файл и настройки</div>
-                    <div style="color: #94a3b8; font-size: 11px; margin-top: 6px;" id="sidebar-update-config-status-detail">После выбора файла нажмите "Начать импорт"</div>
-                </div>
-
-                <div id="sidebar-update-config-progress" style="margin: 0 16ms 16ms 16ms;">
-                    <div style="height: 8px; background: #334155; border-radius: 4px; overflow: hidden;">
-                        <div id="sidebar-update-config-progress-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #10b981, #059669);"></div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px; align-items: center;">
+                        <div style="color: #94a3b8; font-size: 12px;">Логи подготовки:</div>
+                        <button id="sidebar-update-clear-log-config" style="background: none; border: none; color: #ef4444; font-size: 11px; cursor: pointer; padding: 0;">🗑️ Очистить</button>
                     </div>
-                    <div id="sidebar-update-config-progress-text" style="text-align: center; font-size: 12px; color: #94a3b8;">0%</div>
-                </div>
+                    <div id="sidebar-update-config-log" style="flex: 1; min-height: 70px; background: #0f172a; border-radius: 8px; padding: 10px; overflow-y: auto; font-size: 11px; font-family: monospace; margin-bottom: 12px; border: 1px solid #334155;"></div>
 
-                <div id="sidebar-update-config-log" style="flex: 1 1 auto; min-height: 0; background: #0f172a; margin: 0 16ms 16ms 16ms; padding: 12px; border-radius: 8px; overflow-y: auto; overflow-x: hidden; font-size: 11px; line-height: 1.4; font-family: monospace; white-space: pre-wrap; word-break: break-word;"></div>
-
-                <div style="padding: 16px; border-top: 1px solid #334155;">
                     <div style="display: flex; gap: 8px;">
-                        <button id="sidebar-update-config-start" style="flex: 1; padding: 10px; background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; border-radius: 6px; cursor: pointer;">🚀 Начать импорт</button>
-                        <button id="sidebar-update-config-stop" style="flex: 1; padding: 10px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; display: none;">⏹️ Остановить</button>
+                        <button id="sidebar-update-config-start" disabled style="width: 100%; padding: 12px; background: #475569; color: #94a3b8; border: none; border-radius: 6px; cursor: not-allowed; font-weight: bold; font-size: 14px; transition: 0.2s;">🚀 2. Начать обновление</button>
+                        <button id="sidebar-update-config-stop" style="flex: 1; padding: 12px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; display: none;">⏹️ Остановить</button>
                     </div>
                 </div>
             `;
@@ -599,12 +622,94 @@
             document.getElementById('sidebar-update-config-minimize').onclick = () => this.minimizeSidebar();
             document.getElementById('sidebar-update-config-start').onclick = () => this.startImport();
             document.getElementById('sidebar-update-config-stop').onclick = () => this.stopImport();
-            document.getElementById('sidebar-update-config-import-all').onclick = () => this.startImportAll();
+            document.getElementById('sidebar-update-config-import-all').onclick = () => this.selectAllBlocks(); // <--- ИСПРАВЛЕННАЯ ПРИВЯЗКА
             document.getElementById('excel-file-input-config').onchange = (e) => this.loadExcelFile(e.target.files[0]);
+            
+            document.getElementById('sidebar-update-clear-log-config').onclick = () => {
+                this.logEntries = [];
+                this.saveLogToStorage();
+                this.renderConfigLog();
+            };
 
             this.bindImportBlockCheckboxes();
             this.loadSavedConfig();
             this.updateButtonsForImportState();
+        }
+
+        createSidebar() {
+            if (this.sidebar && this.sidebar.id === 'tariff-update-sidebar') return;
+            if (this.sidebar) this.sidebar.remove();
+            
+            this.sidebar = document.createElement('div');
+            this.sidebar.id = 'tariff-update-sidebar';
+            this.sidebar.style.cssText = `
+                position: fixed; top: 0; right: 0; width: 420px; height: 100vh;
+                background: #1e293b; box-shadow: -2px 0 20px rgba(0,0,0,0.3); z-index: 1000001;
+                display: flex; flex-direction: column; font-family: 'Segoe UI', Arial, sans-serif;
+                border-left: 1px solid #334155; transition: transform 0.3s ease;
+            `;
+            
+            this.sidebar.innerHTML = `
+                <div style="padding: 16px 20px; background: #0f172a; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3 style="color: #10b981; margin: 0; font-size: 18px;">⏳ Идёт обновление...</h3>
+                        <div style="color: #94a3b8; font-size: 11px; margin-top: 4px;">Массовое обновление тарифов из Excel</div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button id="sidebar-update-minimize" style="background: none; border: none; color: #94a3b8; font-size: 22px; cursor: pointer; padding: 0; line-height: 1;"></button>
+                        <button id="sidebar-update-close" style="background: none; border: none; color: #94a3b8; font-size: 22px; cursor: pointer; padding: 0; line-height: 1;">×</button>
+                    </div>
+                </div>
+                
+                <div style="padding: 16px; flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                    
+                    <div style="margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px; color: #94a3b8; font-size: 13px;">
+                            <span>Прогресс</span>
+                            <span id="sidebar-update-progress-text">0 / 0</span>
+                        </div>
+                        <div style="height: 8px; background: #334155; border-radius: 4px; overflow: hidden;">
+                            <div id="sidebar-update-progress-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #10b981, #34d399);"></div>
+                        </div>
+                    </div>
+
+                    <div id="sidebar-update-status" style="margin-bottom: 16px; background: #0f172a; padding: 12px; border-radius: 8px; border-left: 3px solid #10b981;">
+                        <div style="color: #10b981; font-size: 13px; font-weight: 500;" id="sidebar-update-status-title">⏳ Подготовка</div>
+                        <div style="color: #94a3b8; font-size: 11px; margin-top: 6px;" id="sidebar-update-status-detail">Ожидание перехода на форму...</div>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px; align-items: center;">
+                        <div style="color: #94a3b8; font-size: 12px;">Логи:</div>
+                        <button id="sidebar-update-clear-log" style="background: none; border: none; color: #ef4444; font-size: 11px; cursor: pointer; padding: 0;">🗑️ Очистить</button>
+                    </div>
+                    <div id="sidebar-update-log" style="flex: 1; background: #0f172a; border-radius: 8px; padding: 12px; overflow-y: auto; font-size: 12px; font-family: monospace; margin-bottom: 16px; border: 1px solid #334155;"></div>
+                    
+                    <div style="padding-top: 16px; border-top: 1px solid #334155;">
+                        <button id="sidebar-update-stop-btn" style="width: 100%; padding: 10px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">⏹️ Остановить</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(this.sidebar);
+            document.getElementById('sidebar-update-close').onclick = () => this.hideSidebar();
+            document.getElementById('sidebar-update-minimize').onclick = () => this.minimizeSidebar();
+            document.getElementById('sidebar-update-stop-btn').onclick = () => this.stopImport();
+            
+            document.getElementById('sidebar-update-clear-log').onclick = () => {
+                this.logEntries = [];
+                this.saveLogToStorage();
+                this.renderLog();
+            };
+        }
+
+        // <--- НОВЫЙ ЧИСТЫЙ МЕТОД ВЫБОРА ВСЕХ БЛОКОВ
+        selectAllBlocks() {
+            this.getImportBlockDefinitions().forEach(block => {
+                const checkbox = document.getElementById(this.getImportBlockCheckboxId(block.key));
+                if (checkbox) checkbox.checked = true;
+            });
+            this.saveConfig(false); 
+            this.addSidebarLog('📦 Выбраны все блоки', 'info');
         }
         
         loadSavedConfig() {
@@ -683,10 +788,10 @@
                     const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
                     
                     this.parseTariffs(rows);
-                    this.saveConfig();
+                    this.saveConfig(false);
                     
                     this.addSidebarLog(`✅ Загружено ${this.tariffsToCreate.length} тарифов`, 'success');
-                    this.updateConfigProgress();
+                    this.updateButtonsForImportState();
                 } catch (error) {
                     this.addSidebarLog(`❌ Ошибка: ${error.message}`, 'error');
                 }
@@ -829,7 +934,6 @@
             this.isImporting = true;
             this.currentIndex = 0;
             this.importStarted = false;
-            this.updateConfigStatus('🚀 Импорт запущен', 'Проверяем страницу тарифа и запускаем обновление');
             this.updateButtonsForImportState();
 
             this.addSidebarLog(`🚀 Запуск импорта: ${this.tariffsToCreate.length} тарифов`, 'info');
@@ -843,28 +947,16 @@
             }));
 
             this.saveStateToStorage();
+            
+            this.createSidebar();
+            this.showSidebar();
+            this.updateSidebarDisplay();
 
             const firstTariff = this.tariffsToCreate[0];
             if (!firstTariff) return;
 
             this.openTariffForUpdate(firstTariff.name);
-            this.addSidebarLog(`🔎 Открываем тариф: ${firstTariff.name}`, 'info');
-
-            setTimeout(() => {
-                if (this.sidebar && this.sidebar.id === 'tariff-update-config-sidebar') {
-                    this.hideSidebar();
-                }
-            }, 1000);
-        }
-        
-        async startImportAll() {
-            this.getImportBlockDefinitions().forEach(block => {
-                const checkbox = document.getElementById(this.getImportBlockCheckboxId(block.key));
-                if (checkbox) checkbox.checked = true;
-            });
-            this.saveConfig();
-            this.addSidebarLog('📦 Выбраны все блоки', 'info');
-            await this.startImport();
+            this.addSidebarLog(`🔎 Ищем тариф: ${firstTariff.name}`, 'info');
         }
 
         handleImportData(dataStr) {
@@ -892,7 +984,7 @@
             const tariff = this.tariffsToCreate[this.currentIndex];
 
             this.addSidebarLog(`📝 ${tariff.name} (${this.currentIndex + 1}/${this.tariffsToCreate.length})`, 'info');
-            this.updateSidebarStatus('🔄 Импорт', `Обрабатываем тариф ${this.currentIndex + 1} из ${this.tariffsToCreate.length}: ${tariff.name}`);
+            this.updateSidebarStatus('🔄 Импорт', `Обновляем: ${tariff.name}`);
             this.updateSidebarDisplay();
             this.saveStateToStorage();
 
@@ -900,7 +992,7 @@
             if (!this.ensureCanContinue(`после обработки тарифа ${tariff.name}`)) return;
 
             if (success) {
-                this.addSidebarLog(`✅ Обновлен: ${tariff.name}`, 'success');
+                this.addSidebarLog(`✅ Успешно: ${tariff.name}`, 'success');
                 this.currentIndex++;
                 this.saveStateToStorage();
 
@@ -924,13 +1016,13 @@
                     return;
                 } else {
                     this.finishImport();
-                    this.addSidebarLog('↩️ Завершено! Возвращаемся к списку тарифов...', 'info');
+                    this.addSidebarLog('↩️ Завершено! Возвращаемся к списку...', 'info');
                     await this.delay(2000);
                     const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]+$/, '');
                     window.location.href = baseUrl;
                 }
             } else {
-                this.addSidebarLog(`❌ Ошибка: ${tariff.name}`, 'error');
+                this.addSidebarLog(`❌ Ошибка сохранения: ${tariff.name}`, 'error');
                 this.finishImport();
             }
         }
@@ -943,13 +1035,15 @@
                 clearInterval(this.formCheckInterval);
                 this.formCheckInterval = null;
             }
-            this.addSidebarLog('✨ Импорт завершен', 'success');
+            this.addSidebarLog('✨ Все тарифы обновлены!', 'success');
 
             localStorage.removeItem('tariff_update_data');
             localStorage.removeItem('tariff_update_state');
             this.importStarted = false;
             this.currentIndex = 0;
             this.tariffsToCreate = [];
+            
+            this.updateSidebarDisplay();
         }
         
         async waitForCreateFormReady(tariffName = '') {
@@ -1235,7 +1329,6 @@
                 const cleanMgxValue = (val) => {
                     if (!val) return '';
                     const s = String(val).trim();
-                    // Берем только целую часть до первой запятой или точки (дробная часть отбрасывается, чтобы тарификатор не склеивал цифры)
                     const idxComma = s.indexOf(',');
                     const idxDot = s.indexOf('.');
                     let cutIdx = -1;
@@ -1584,56 +1677,6 @@
             return document.querySelector(`input[type="checkbox"][id*="${idPart}"], [role="checkbox"][id*="${idPart}"], [aria-label*="${labelText}"]`);
         }
         
-        createSidebar() {
-            if (this.sidebar && this.sidebar.id === 'tariff-update-sidebar') return;
-            if (this.sidebar) this.sidebar.remove();
-            
-            this.sidebar = document.createElement('div');
-            this.sidebar.id = 'tariff-update-sidebar';
-            this.sidebar.style.cssText = `
-                position: fixed; top: 0; right: 0; width: 450px; height: 100vh;
-                background: #1e293b; box-shadow: -2px 0 20px rgba(0,0,0,0.3); z-index: 1000001;
-                display: flex; flex-direction: column; font-family: 'Segoe UI', Arial, sans-serif;
-                border-left: 1px solid #334155;
-            `;
-            
-            this.sidebar.innerHTML = `
-                <div style="padding: 16px 20px; background: #0f172a; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <h3 style="color: #10b981; margin: 0; font-size: 18px;">📥 Импорт тарифов</h3>
-                        <div style="color: #94a3b8; font-size: 11px; margin-top: 4px;">Обновление существующих тарифов из Excel</div>
-                    </div>
-                    <div style="display: flex; gap: 8px;">
-                        <button id="sidebar-update-minimize" style="background: none; border: none; color: #94a3b8; font-size: 18px; cursor: pointer; padding: 4px 8px;">−</button>
-                        <button id="sidebar-update-close" style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; padding: 4px 8px;">×</button>
-                    </div>
-                </div>
-                
-                <div id="sidebar-update-status" style="background: #0f172a; margin: 16px; padding: 12px; border-radius: 8px; border-left: 3px solid #10b981;">
-                    <div style="color: #10b981; font-size: 13px; font-weight: 500;" id="sidebar-update-status-title">🔄 Импорт</div>
-                    <div style="color: #94a3b8; font-size: 11px; margin-top: 6px;" id="sidebar-update-status-detail">Обновление тарифов...</div>
-                </div>
-                
-                <div id="sidebar-update-progress" style="margin: 0 16ms 16ms 16ms;">
-                    <div style="height: 8px; background: #334155; border-radius: 4px; overflow: hidden;">
-                        <div id="sidebar-update-progress-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #10b981, #059669);"></div>
-                    </div>
-                    <div id="sidebar-update-progress-text" style="text-align: center; font-size: 12px; color: #94a3b8;">0%</div>
-                </div>
-                
-                <div id="sidebar-update-log" style="flex: 1 1 auto; min-height: 0; background: #0f172a; margin: 0 16ms 16ms 16ms; padding: 12px; border-radius: 8px; overflow-y: auto; overflow-x: hidden; font-size: 11px; line-height: 1.4; font-family: monospace; white-space: pre-wrap; word-break: break-word;"></div>
-                
-                <div style="padding: 16px; border-top: 1px solid #334155;">
-                    <button id="sidebar-update-stop-btn" style="width: 100%; padding: 10px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer;">⏹️ Остановить импорт</button>
-                </div>
-            `;
-            
-            document.body.appendChild(this.sidebar);
-            document.getElementById('sidebar-update-close').onclick = () => this.hideSidebar();
-            document.getElementById('sidebar-update-minimize').onclick = () => this.minimizeSidebar();
-            document.getElementById('sidebar-update-stop-btn').onclick = () => this.stopImport();
-        }
-
         hideOtherSidebars() {
             const sidebarIds = ['tariff-export-sidebar', 'tariff-create-config-sidebar', 'tariff-create-progress-sidebar', 'tariff-update-config-sidebar', 'tariff-update-sidebar'];
             sidebarIds.forEach(id => {
@@ -1664,7 +1707,7 @@
                 this.sidebar.style.transform = 'translateX(0)';
                 const minimizeBtn = document.getElementById('sidebar-update-config-minimize') || document.getElementById('sidebar-update-minimize');
                 if (minimizeBtn) {
-                    minimizeBtn.textContent = '−';
+                    minimizeBtn.textContent = '';
                     minimizeBtn.onclick = () => this.minimizeSidebar();
                 }
             }
@@ -1678,20 +1721,56 @@
                 this.updateButtonsForImportState();
                 this.restoreLogFromStorage();
             } else {
-                this.createSidebar();
-                this.hideOtherSidebars();
+                this.showConfigSidebar();
             }
         }
 
-        updateConfigProgress() {
-            if (!this.sidebar || this.sidebar.id !== 'tariff-update-config-sidebar') return;
-            const total = this.tariffsToCreate.length > 0 ? (this.currentIndex / this.tariffsToCreate.length * 100) : 0;
-            const fill = document.getElementById('sidebar-update-config-progress-fill');
-            const text = document.getElementById('sidebar-update-config-progress-text');
-            if (fill) fill.style.width = `${total}%`;
-            if (text) text.textContent = `${Math.round(total)}% (${this.currentIndex}/${this.tariffsToCreate.length})`;
+        updateButtonsForImportState() {
+            if (!this.sidebar) return;
+            const configStartBtn = document.getElementById('sidebar-update-config-start');
+            const configStopBtn = document.getElementById('sidebar-update-config-stop');
+            const importAllBtn = document.getElementById('sidebar-update-config-import-all');
+            const progressStopBtn = document.getElementById('sidebar-update-stop-btn');
+            const fileStatus = document.getElementById('sidebar-update-file-status');
+            
+            const total = this.tariffsToCreate ? this.tariffsToCreate.length : 0;
+
+            if (this.isImporting) {
+                if (configStartBtn) configStartBtn.style.display = 'none';
+                if (configStopBtn) configStopBtn.style.display = 'block';
+                if (importAllBtn) importAllBtn.disabled = true;
+                if (progressStopBtn) progressStopBtn.disabled = false;
+            } else {
+                if (configStartBtn) {
+                    configStartBtn.style.display = 'block';
+                    if (total > 0) {
+                        configStartBtn.disabled = false;
+                        configStartBtn.style.background = '#10b981';
+                        configStartBtn.style.color = '#ffffff';
+                        configStartBtn.style.cursor = 'pointer';
+                    } else {
+                        configStartBtn.disabled = true;
+                        configStartBtn.style.background = '#475569';
+                        configStartBtn.style.color = '#94a3b8';
+                        configStartBtn.style.cursor = 'not-allowed';
+                    }
+                }
+                if (configStopBtn) configStopBtn.style.display = 'none';
+                if (importAllBtn) importAllBtn.disabled = false;
+                if (progressStopBtn) progressStopBtn.disabled = false;
+            }
+            
+            if (fileStatus) {
+                if (total > 0) {
+                    fileStatus.textContent = `Готово к обновлению: ${total} шт.`;
+                    fileStatus.style.color = '#4ade80';
+                } else {
+                    fileStatus.textContent = 'Нажмите и выберите файл (.xls, .xlsx)';
+                    fileStatus.style.color = '#cbd5e1';
+                }
+            }
         }
-        
+
         updateSidebarDisplay() {
             if (!this.sidebar || this.sidebar.id !== 'tariff-update-sidebar') return;
             const total = this.tariffsToCreate.length > 0 ? (this.currentIndex / this.tariffsToCreate.length * 100) : 0;
@@ -1699,32 +1778,6 @@
             const text = document.getElementById('sidebar-update-progress-text');
             if (fill) fill.style.width = `${total}%`;
             if (text) text.textContent = `${Math.round(total)}% (${this.currentIndex}/${this.tariffsToCreate.length})`;
-        }
-
-        updateButtonsForImportState() {
-            if (!this.sidebar) return;
-            const startBtn = document.getElementById('sidebar-update-start');
-            const stopBtn = document.getElementById('sidebar-update-stop');
-            const configStartBtn = document.getElementById('sidebar-update-config-start');
-            const configStopBtn = document.getElementById('sidebar-update-config-stop');
-            const importAllBtn = document.getElementById('sidebar-update-config-import-all');
-            const progressStopBtn = document.getElementById('sidebar-update-stop-btn');
-
-            if (this.isImporting) {
-                if (startBtn) startBtn.style.display = 'none';
-                if (stopBtn) stopBtn.style.display = 'block';
-                if (configStartBtn) configStartBtn.style.display = 'none';
-                if (configStopBtn) configStopBtn.style.display = 'block';
-                if (importAllBtn) importAllBtn.disabled = true;
-                if (progressStopBtn) progressStopBtn.disabled = false;
-            } else {
-                if (startBtn) startBtn.style.display = 'block';
-                if (stopBtn) stopBtn.style.display = 'none';
-                if (configStartBtn) configStartBtn.style.display = 'block';
-                if (configStopBtn) configStopBtn.style.display = 'none';
-                if (importAllBtn) importAllBtn.disabled = false;
-                if (progressStopBtn) progressStopBtn.disabled = false;
-            }
         }
 
         updateConfigStatus(title, detail) {
@@ -1751,8 +1804,8 @@
                 return;
             }
             localStorage.setItem('tariff_update_stop', String(Date.now()));
-            this.addSidebarLog('⏹️ Импорт остановлен пользователем', 'warning');
-            this.applyStoppedState('Импорт остановлен пользователем');
+            this.addSidebarLog('⏹️ Обновление остановлено пользователем', 'warning');
+            this.applyStoppedState('Обновление остановлено пользователем');
         }
         
         handleConfigUpdate(dataStr) {
@@ -1766,32 +1819,12 @@
             const lastEntry = this.logEntries[this.logEntries.length - 1];
             if (lastEntry && lastEntry.message === message && lastEntry.type === type) return;
 
-            const entry = { time: new Date().toLocaleTimeString(), message: message, type: type };
+            const entry = { time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' }), message: message, type: type };
             this.logEntries.push(entry);
             while (this.logEntries.length > 120) this.logEntries.shift();
             this.saveLogToStorage();
             this.renderLog();
             this.renderConfigLog();
-        }
-
-        renderConfigLog() {
-            const logDiv = document.getElementById('sidebar-update-config-log');
-            if (!logDiv) return;
-            logDiv.innerHTML = '';
-            if (this.logEntries.length === 0) {
-                logDiv.innerHTML = '<div style="color: #60a5fa;">💡 Готов к импорту</div>';
-                return;
-            }
-            const colors = { success: '#4ade80', error: '#f87171', info: '#60a5fa', warning: '#fbbf24' };
-            for (const entry of this.logEntries) {
-                const div = document.createElement('div');
-                div.style.color = colors[entry.type] || '#94a3b8';
-                div.style.marginBottom = '6px';
-                div.style.fontSize = '11px';
-                div.innerHTML = `[${entry.time}] ${entry.message}`;
-                logDiv.appendChild(div);
-            }
-            requestAnimationFrame(() => { logDiv.scrollTop = logDiv.scrollHeight; });
         }
         
         setInputValue(input, value) {
